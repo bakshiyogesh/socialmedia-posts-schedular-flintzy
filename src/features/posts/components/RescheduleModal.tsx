@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, Clock, X, Check } from 'lucide-react';
+import { Clock, X, Check } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { postsApi } from '../api/postsApi';
 import { POSTS_QUERY_KEY } from '../hooks/usePosts';
@@ -53,18 +53,18 @@ export function RescheduleModal({ post, onClose }: RescheduleModalProps) {
     },
   });
 
-  if (!post) return null;
-
-  // Lock background scroll when modal is open
+  // Lock background scroll while the modal is open.
+  // Must run before the early return so hook order is stable across renders.
   React.useEffect(() => {
-    if (post) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
+    if (!post) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [post]);
+
+  if (!post) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

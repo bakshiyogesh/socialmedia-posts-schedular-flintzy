@@ -15,18 +15,18 @@ export function OAuthReconnectModal({ post, onClose }: OAuthReconnectModalProps)
   const [isReconnecting, setIsReconnecting] = useState(false);
   const retryMutation = useRetryPostMutation();
 
-  if (!post) return null;
-
-  // Lock background scroll when modal is open
+  // Lock background scroll while the modal is open.
+  // Must run before the early return so hook order is stable across renders.
   React.useEffect(() => {
-    if (post) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
+    if (!post) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [post]);
+
+  if (!post) return null;
 
   const handleReconnect = async () => {
     setIsReconnecting(true);
