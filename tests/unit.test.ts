@@ -14,6 +14,7 @@ import {
 } from '@/features/filters/utils/filterPosts';
 
 import { validatePost } from '@/features/composer/utils/validation';
+import { normalizeMediaUrl, isVideoMedia } from '@/lib/media';
 import type { Post } from '@/types';
 
 describe('Timezone & Calendar Grouping', () => {
@@ -273,5 +274,34 @@ describe('Pre-Flight Validation & Platform Limits', () => {
     expect(
       result.blockers.some((b) => b.message.includes('must be in the future'))
     ).toBe(true);
+  });
+
+  it('permits local data URL image/video uploads and satisfies media requirement for Instagram/TikTok', () => {
+    const videoDataUrl = 'data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDJpc29t';
+    const result = validatePost({
+      content: 'TikTok video caption',
+      platforms: ['tiktok'],
+      mediaUrl: videoDataUrl,
+      scheduledAt: new Date(Date.now() + 600000).toISOString(),
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.blockers).toHaveLength(0);
+  });
+});
+
+describe('Media Utilities & Progressive Loader', () => {
+  it('normalizes external URLs without corrupting local data: or blob: protocols', () => {
+    expect(normalizeMediaUrl('images.unsplash.com/photo-123')).toBe('https://images.unsplash.com/photo-123');
+    expect(normalizeMediaUrl('https://example.com/pic.png')).toBe('https://example.com/pic.png');
+    expect(normalizeMediaUrl('data:image/png;base64,iVBORw0KGgo')).toBe('data:image/png;base64,iVBORw0KGgo');
+    expect(normalizeMediaUrl('blob:http://localhost:3000/12345')).toBe('blob:http://localhost:3000/12345');
+  });
+
+  it('detects video assets correctly for data URLs and file extensions', () => {
+    expect(isVideoMedia('data:video/mp4;base64,AAAA')).toBe(true);
+    expect(isVideoMedia('https://example.com/clip.mp4')).toBe(true);
+    expect(isVideoMedia('https://example.com/clip.mov?download=true')).toBe(true);
+    expect(isVideoMedia('https://example.com/photo.jpg')).toBe(false);
+    expect(isVideoMedia('data:image/png;base64,iVBOR')).toBe(false);
   });
 });

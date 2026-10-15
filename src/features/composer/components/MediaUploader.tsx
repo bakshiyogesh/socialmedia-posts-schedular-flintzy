@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { UploadCloud, Link as LinkIcon, Image as ImageIcon, X, Check, FileText } from 'lucide-react';
+import { UploadCloud, Link as LinkIcon, Image as ImageIcon, X, Check, FileText, Video as VideoIcon } from 'lucide-react';
 import { ProgressiveImage } from '@/components/shared/ProgressiveImage';
 import { toast } from 'sonner';
 
@@ -25,11 +25,12 @@ export function MediaUploader({
   onStateChange,
 }: MediaUploaderProps) {
   const [activeMode, setActiveMode] = useState<'upload' | 'url'>(
-    mediaUrl.startsWith('data:') ? 'upload' : 'url'
+    mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:') ? 'upload' : 'url'
   );
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploadedFileSize, setUploadedFileSize] = useState<string | null>(null);
+  const [uploadedFileType, setUploadedFileType] = useState<'image' | 'video' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatFileSize = (bytes: number) => {
@@ -39,7 +40,10 @@ export function MediaUploader({
   };
 
   const handleProcessFile = (file: File) => {
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|ogg|mov|m4v)$/i.test(file.name);
+    const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg|bmp)$/i.test(file.name);
+
+    if (!isVideo && !isImage) {
       toast.error('Please upload an image or video file.');
       return;
     }
@@ -52,6 +56,7 @@ export function MediaUploader({
 
     setUploadedFileName(file.name);
     setUploadedFileSize(formatFileSize(file.size));
+    setUploadedFileType(isVideo ? 'video' : 'image');
     onStateChange('loading');
 
     const reader = new FileReader();
@@ -103,13 +108,14 @@ export function MediaUploader({
     onMediaChange('');
     setUploadedFileName(null);
     setUploadedFileSize(null);
+    setUploadedFileType(null);
     onStateChange('idle');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const isDataUrl = mediaUrl.startsWith('data:');
+  const isDataUrl = mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:');
 
   return (
     <div className="space-y-2.5">
@@ -249,8 +255,9 @@ export function MediaUploader({
               <ProgressiveImage
                 src={mediaUrl}
                 alt="Thumbnail preview"
-                debounceMs={200}
+                debounceMs={0}
                 compact
+                isVideo={uploadedFileType === 'video'}
                 onStateChange={onStateChange}
               />
             </div>
@@ -259,7 +266,11 @@ export function MediaUploader({
                 {mediaLoadState === 'loaded' ? (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
                     <Check className="w-3.5 h-3.5" />
-                    {isDataUrl ? 'Local File Attached' : 'Media Attached'}
+                    {uploadedFileType === 'video'
+                      ? 'Video Attached'
+                      : isDataUrl
+                      ? 'Local File Attached'
+                      : 'Media Attached'}
                   </span>
                 ) : mediaLoadState === 'error' ? (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-400">
@@ -276,7 +287,11 @@ export function MediaUploader({
 
               {uploadedFileName ? (
                 <p className="text-[11px] text-zinc-300 truncate flex items-center gap-1 mt-0.5">
-                  <FileText className="w-3 h-3 text-zinc-500 shrink-0" />
+                  {uploadedFileType === 'video' ? (
+                    <VideoIcon className="w-3 h-3 text-indigo-400 shrink-0" />
+                  ) : (
+                    <FileText className="w-3 h-3 text-zinc-500 shrink-0" />
+                  )}
                   <span className="truncate">{uploadedFileName}</span>
                   {uploadedFileSize && (
                     <span className="text-zinc-500 shrink-0">({uploadedFileSize})</span>

@@ -88,21 +88,26 @@ export function validatePost(input: PostFormInput): ValidationResult {
 
   // 4. Media URL format validation (if provided)
   if (input.mediaUrl && input.mediaUrl.trim().length > 0) {
-    try {
-      const url = new URL(input.mediaUrl.trim());
-      if (!['http:', 'https:'].includes(url.protocol)) {
+    const trimmed = input.mediaUrl.trim();
+    const isLocalAttachment = trimmed.startsWith('data:') || trimmed.startsWith('blob:');
+
+    if (!isLocalAttachment) {
+      try {
+        const url = new URL(trimmed);
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          blockers.push({
+            type: 'error',
+            field: 'media',
+            message: 'Media URL must use http:// or https:// protocol.',
+          });
+        }
+      } catch {
         blockers.push({
           type: 'error',
           field: 'media',
-          message: 'Media URL must use http:// or https:// protocol.',
+          message: 'Invalid media URL format.',
         });
       }
-    } catch {
-      blockers.push({
-        type: 'error',
-        field: 'media',
-        message: 'Invalid media URL format.',
-      });
     }
   }
 

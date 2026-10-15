@@ -2,39 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { ImageOff } from 'lucide-react';
+import { normalizeMediaUrl, isVideoMedia, getLowQualityUrl } from '@/lib/media';
 
+export { normalizeMediaUrl, isVideoMedia, getLowQualityUrl };
 export type ImageLoadState = 'idle' | 'loading' | 'loaded' | 'error';
-
-/** Normalises user input like "images.unsplash.com/..." into an absolute https URL. */
-export function normalizeMediaUrl(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return '';
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-}
-
-/**
- * Derives a tiny, low-quality placeholder (LQIP) URL for CDNs that support
- * on-the-fly resizing. Returns null when the host is unknown, in which case
- * we fall back to blurring the full image while it streams in.
- */
-export function getLowQualityUrl(src: string): string | null {
-  try {
-    const url = new URL(src);
-    if (url.hostname.endsWith('images.unsplash.com')) {
-      url.searchParams.set('w', '24');
-      url.searchParams.set('q', '10');
-      url.searchParams.set('blur', '50');
-      url.searchParams.set('auto', 'format');
-      return url.toString();
-    }
-    if (url.hostname.endsWith('picsum.photos')) {
-      return `${src}${src.includes('?') ? '&' : '?'}blur=10`;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
 
 interface ProgressiveImageProps {
   src: string;
@@ -45,6 +16,8 @@ interface ProgressiveImageProps {
   onStateChange?: (state: ImageLoadState) => void;
   /** Compact mode hides the error label (for tiny thumbnails). */
   compact?: boolean;
+  /** Explicitly flag as video if known from file upload metadata */
+  isVideo?: boolean;
 }
 
 /**
@@ -61,6 +34,7 @@ export function ProgressiveImage({
   debounceMs = 0,
   onStateChange,
   compact = false,
+  isVideo = false,
 }: ProgressiveImageProps) {
   const normalized = normalizeMediaUrl(src);
   const [debouncedSrc, setDebouncedSrc] = useState(normalized);
@@ -86,7 +60,8 @@ export function ProgressiveImage({
     onStateChange?.(state);
   }, [state, onStateChange]);
 
-  const lqip = debouncedSrc ? getLowQualityUrl(debouncedSrc) : null;
+  const isVideoItem = isVideo || isVideoMedia(debouncedSrc);
+  const lqip = (!isVideoItem && debouncedSrc) ? getLowQualityUrl(debouncedSrc) : null;
   const isLoaded = state === 'loaded';
 
   return (
@@ -96,8 +71,8 @@ export function ProgressiveImage({
         <div className="absolute inset-0 animate-shimmer bg-[linear-gradient(110deg,#18181b_8%,#27272a_18%,#18181b_33%)] bg-[length:200%_100%]" />
       )}
 
-      {/* 2. Low-quality blurred placeholder */}
-      {lqip && state !== 'error' && (
+      {/* 2. Low-quality blurred placeholder (for static images) */}
+      {lqip && state !== 'error' && !isVideoItem && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={`lqip-${lqip}`}
@@ -111,8 +86,27 @@ export function ProgressiveImage({
         />
       )}
 
-      {/* 3. Full-resolution image (blurred until loaded when no LQIP is available) */}
-      {debouncedSrc && state !== 'error' && (
+      {/* 3a. Video player frame */}
+      {debouncedSrc && state !== 'error' && isVideoItem && (
+        <video
+          key={debouncedSrc}
+          src={debouncedSrc}
+          aria-label={alt}
+          muted
+          loop
+          playsInline
+          autoPlay
+          preload="auto"
+          onLoadedData={() => setState('loaded')}
+          onError={() => setState('error')}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+            isLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      )}
+
+      {/* 3b. Full-resolution image */}
+      {debouncedSrc && state !== 'error' && !isVideoItem && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={debouncedSrc}
