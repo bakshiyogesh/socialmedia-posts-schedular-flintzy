@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar as CalendarIcon, Clock, Sparkles } from 'lucide-react';
 import { formatLocalDateTimeWithTz, getUserTimeZoneAbbr } from '@/lib/time';
 
@@ -9,22 +9,55 @@ interface DateTimePickerProps {
   onChange: (isoUtcString: string) => void;
 }
 
+/**
+ * Format a Date to local YYYY-MM-DD for native date input without UTC day-shift
+ */
+function toLocalDateString(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Format a Date to local HH:mm for native time input
+ */
+function toLocalTimeString(d: Date): string {
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
 export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps) {
-  // Local date formatted as YYYY-MM-DD for native date input
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
+
+  // Local date formatted as YYYY-MM-DD
   const [dateStr, setDateStr] = useState<string>(() => {
-    const d = scheduledAtUtc ? new Date(scheduledAtUtc) : new Date(Date.now() + 1000 * 60 * 60 * 2); // +2 hours
-    return d.toISOString().split('T')[0] || '';
+    const d = scheduledAtUtc ? new Date(scheduledAtUtc) : new Date(Date.now() + 1000 * 60 * 60 * 2);
+    return toLocalDateString(isNaN(d.getTime()) ? new Date() : d);
   });
 
   // Local time formatted as HH:mm
   const [timeStr, setTimeStr] = useState<string>(() => {
     const d = scheduledAtUtc ? new Date(scheduledAtUtc) : new Date(Date.now() + 1000 * 60 * 60 * 2);
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return toLocalTimeString(isNaN(d.getTime()) ? new Date() : d);
   });
 
   const tzAbbr = getUserTimeZoneAbbr();
+  const minDateStr = toLocalDateString(new Date());
+
+  // Synchronize internal state whenever external scheduledAtUtc changes (e.g. restore draft, duplicate, reset)
+  useEffect(() => {
+    if (!scheduledAtUtc) return;
+    const d = new Date(scheduledAtUtc);
+    if (!isNaN(d.getTime())) {
+      const nextDate = toLocalDateString(d);
+      const nextTime = toLocalTimeString(d);
+      setDateStr((curr) => (curr !== nextDate ? nextDate : curr));
+      setTimeStr((curr) => (curr !== nextTime ? nextTime : curr));
+    }
+  }, [scheduledAtUtc]);
 
   // Recompute UTC when date or time changes
   useEffect(() => {
@@ -41,7 +74,7 @@ export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps
     }
   }, [dateStr, timeStr, onChange]);
 
-  // Suggested posting times (Mock configuration)
+  // Suggested posting times (AI / High-engagement slots)
   const suggestions = [
     {
       label: 'Today 3:00 PM',
@@ -49,6 +82,10 @@ export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps
       getDate: () => {
         const d = new Date();
         d.setHours(15, 0, 0, 0);
+        // If 3 PM today has already passed, schedule for tomorrow 3 PM
+        if (d.getTime() <= Date.now()) {
+          d.setDate(d.getDate() + 1);
+        }
         return d;
       },
     },
@@ -76,57 +113,102 @@ export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps
 
   const applySuggestion = (getDate: () => Date) => {
     const d = getDate();
-    setDateStr(d.toISOString().split('T')[0] || '');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    setTimeStr(`${hours}:${minutes}`);
+    setDateStr(toLocalDateString(d));
+    setTimeStr(toLocalTimeString(d));
+  };
+
+  const handleOpenDatePicker = () => {
+    try {
+      dateInputRef.current?.showPicker?.();
+    } catch {
+      dateInputRef.current?.focus();
+    }
+  };
+
+  const handleOpenTimePicker = () => {
+    try {
+      timeInputRef.current?.showPicker?.();
+    } catch {
+      timeInputRef.current?.focus();
+    }
   };
 
   return (
     <div className="space-y-3">
+      {/* Header with Zone Badge */}
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-zinc-300">
-          Scheduled Time <span className="text-rose-400">*</span>
+        <label className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          <span>Publish Date & Time</span>
+          <span className="text-rose-400">*</span>
         </label>
-        <span className="text-[11px] text-zinc-400 font-mono">
-          Local Zone: <strong className="text-indigo-400">{tzAbbr || 'Local'}</strong>
+        <span className="text-[11px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+          <span>Timezone:</span>
+          <strong className="text-indigo-400 font-semibold">{tzAbbr || 'Local'}</strong>
         </span>
       </div>
 
+      {/* Date & Time Input Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        {/* Date Selector */}
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-            <CalendarIcon className="w-4 h-4" />
+        {/* Date Selector Card */}
+        <div className="space-y-1">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 flex items-center justify-between">
+            <span>Date</span>
+            <span className="text-zinc-600 font-normal">YYYY-MM-DD</span>
+          </span>
+          <div
+            onClick={handleOpenDatePicker}
+            className="group relative flex items-center bg-zinc-900/90 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 rounded-xl transition-all shadow-sm cursor-pointer"
+          >
+            {/* Themed Prominent Icon Badge */}
+            <div className="pl-3 pr-2 py-2 flex items-center text-indigo-400 group-hover:text-indigo-300 transition-colors pointer-events-none">
+              <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                <CalendarIcon className="w-4 h-4 text-indigo-400" />
+              </div>
+            </div>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={dateStr}
+              min={minDateStr}
+              onChange={(e) => setDateStr(e.target.value)}
+              className="w-full pr-3 py-2.5 bg-transparent text-xs font-medium text-zinc-100 placeholder-zinc-500 focus:outline-none cursor-pointer [color-scheme:dark]"
+            />
           </div>
-          <input
-            type="date"
-            value={dateStr}
-            min={new Date().toISOString().split('T')[0]}
-            onChange={(e) => setDateStr(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          />
         </div>
 
-        {/* Time Selector */}
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-            <Clock className="w-4 h-4" />
+        {/* Time Selector Card */}
+        <div className="space-y-1">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 flex items-center justify-between">
+            <span>Time</span>
+            <span className="text-zinc-600 font-normal">HH : MM</span>
+          </span>
+          <div
+            onClick={handleOpenTimePicker}
+            className="group relative flex items-center bg-zinc-900/90 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 rounded-xl transition-all shadow-sm cursor-pointer"
+          >
+            {/* Themed Prominent Icon Badge */}
+            <div className="pl-3 pr-2 py-2 flex items-center text-indigo-400 group-hover:text-indigo-300 transition-colors pointer-events-none">
+              <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                <Clock className="w-4 h-4 text-indigo-400" />
+              </div>
+            </div>
+            <input
+              ref={timeInputRef}
+              type="time"
+              value={timeStr}
+              onChange={(e) => setTimeStr(e.target.value)}
+              className="w-full pr-3 py-2.5 bg-transparent text-xs font-mono font-medium text-zinc-100 focus:outline-none cursor-pointer [color-scheme:dark]"
+            />
           </div>
-          <input
-            type="time"
-            value={timeStr}
-            onChange={(e) => setTimeStr(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
-          />
         </div>
       </div>
 
       {/* Suggested Posting Times */}
       <div className="space-y-1.5 pt-1">
         <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-          <Sparkles className="w-3 h-3 text-amber-400" />
-          <span>Recommended AI timeslots (mock config):</span>
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>Recommended peak timeslots:</span>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           {suggestions.map((s, idx) => (
@@ -134,10 +216,10 @@ export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps
               key={idx}
               type="button"
               onClick={() => applySuggestion(s.getDate)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-[11px] text-zinc-300 transition-colors"
+              className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900/80 hover:bg-zinc-800/90 border border-zinc-800 hover:border-indigo-500/40 text-[11px] text-zinc-300 hover:text-white transition-all shadow-sm"
             >
-              <span>{s.label}</span>
-              <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <span className="font-medium">{s.label}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
                 {s.badge}
               </span>
             </button>
@@ -145,12 +227,17 @@ export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps
         </div>
       </div>
 
-      {/* Stored In UTC Confirmation Pill */}
+      {/* Live Confirmation Preview Card */}
       {scheduledAtUtc && (
-        <div className="text-[11px] text-zinc-400 bg-zinc-900/60 border border-zinc-800/80 px-3 py-1.5 rounded-lg flex items-center justify-between font-mono">
-          <span>Display: {formatLocalDateTimeWithTz(scheduledAtUtc)}</span>
-          <span className="text-zinc-500 text-[10px]">
-            Stored UTC: {new Date(scheduledAtUtc).toISOString().slice(11, 19)}Z
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 p-2.5 rounded-xl bg-zinc-900/40 border border-zinc-800/70 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-zinc-300 font-medium truncate">
+              {formatLocalDateTimeWithTz(scheduledAtUtc)}
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-zinc-500 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800 self-start sm:self-auto shrink-0">
+            UTC {new Date(scheduledAtUtc).toISOString().replace('T', ' ').slice(0, 16)}Z
           </span>
         </div>
       )}
