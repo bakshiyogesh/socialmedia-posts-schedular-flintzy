@@ -1,6 +1,11 @@
 import { http, HttpResponse, delay } from 'msw';
 import { postsStore } from '@/lib/api/postsStore';
 import { isFutureDate } from '@/lib/time';
+import type { Post } from '@/types';
+
+type CreatePostBody = Partial<
+  Pick<Post, 'content' | 'platforms' | 'mediaUrl' | 'scheduledAt' | 'platformOverrides'>
+>;
 
 export const handlers = [
   // GET /api/posts
@@ -11,7 +16,7 @@ export const handlers = [
 
   // POST /api/posts
   http.post('/api/posts', async ({ request }) => {
-    const body = (await request.json()) as any;
+    const body = (await request.json()) as CreatePostBody;
 
     if (!body.scheduledAt || !isFutureDate(body.scheduledAt)) {
       return HttpResponse.json(
@@ -66,7 +71,7 @@ export const handlers = [
   // PATCH /api/posts/:id
   http.patch('/api/posts/:id', async ({ params, request }) => {
     const { id } = params;
-    const updates = (await request.json()) as any;
+    const updates = (await request.json()) as Partial<Post>;
     const updated = postsStore.update(id as string, updates);
     if (!updated) {
       return HttpResponse.json({ error: 'Post not found' }, { status: 404 });
