@@ -217,24 +217,28 @@ export function PostCard({
       {/* Failure Recovery Strip */}
       {isFailed && (
         <div className="mt-4 pt-3 border-t border-rose-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span
-              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${errorConfig.bg}`}
-            >
-              <ErrorIcon className="w-3.5 h-3.5 shrink-0" />
-              <span>{errorConfig.label}</span>
-            </span>
-            <p className="text-xs text-rose-300/90 truncate min-w-0 flex-1" title={post.errorMessage}>
+          {/* Top on Mobile: Badge above, description text below */}
+          <div className="flex-1 min-w-0 space-y-1.5 w-full">
+            <div>
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border shrink-0 whitespace-nowrap shadow-sm ${errorConfig.bg}`}
+              >
+                <ErrorIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>{errorConfig.label}</span>
+              </span>
+            </div>
+            <p className="text-xs text-rose-300/90 leading-relaxed break-words [overflow-wrap:anywhere]" title={post.errorMessage}>
               {post.errorMessage}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          {/* Action Buttons: Half-and-Half width each on mobile screens, flex inline on desktop */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
             {/* Contextual CTA (e.g. Reconnect Token, Fix Dimensions, Reschedule Slot) */}
             <button
               type="button"
               onClick={errorConfig.onAction}
-              className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-medium border border-zinc-700 transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center justify-center px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-medium border border-zinc-700 transition-colors whitespace-nowrap w-full sm:w-auto text-center"
             >
               {errorConfig.ctaText}
             </button>
@@ -244,7 +248,7 @@ export function PostCard({
               type="button"
               onClick={handleRetry}
               disabled={isRetrying}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-800 text-white rounded-lg text-xs font-medium shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-500 whitespace-nowrap shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-800 text-white rounded-lg text-xs font-medium shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-500 whitespace-nowrap w-full sm:w-auto text-center"
               aria-label={`Retry failed post ${post.id}`}
             >
               <RefreshCw

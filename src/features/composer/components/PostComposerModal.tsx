@@ -370,7 +370,7 @@ export function PostComposerModal({
           </div>
 
           {/* Right Column: Live Simulated Preview (5 cols) */}
-          <div className="lg:col-span-5 min-w-0 w-full flex flex-col min-h-[380px] lg:border-l lg:border-zinc-800/80 lg:pl-6 overflow-hidden">
+          <div className="lg:col-span-5 min-w-0 w-full flex flex-col lg:border-l lg:border-zinc-800/80 lg:pl-6">
             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
               Live Feed Simulation
             </h3>

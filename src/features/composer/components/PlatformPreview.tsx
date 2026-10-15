@@ -54,7 +54,7 @@ export function PlatformPreview({
   const config = PLATFORMS[currentPlatform];
 
   return (
-    <div className="flex flex-col h-full space-y-3 min-w-0 w-full overflow-hidden">
+    <div className="flex flex-col min-w-0 w-full space-y-3">
       {/* Platform Switcher Tabs */}
       <div className="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-x-auto shrink-0">
         {selectedPlatforms.map((pid) => {
@@ -78,7 +78,7 @@ export function PlatformPreview({
       </div>
 
       {/* Simulated Preview Card */}
-      <div className="flex-1 bg-zinc-950/80 border border-zinc-800 rounded-2xl p-3 sm:p-4 overflow-y-auto overflow-x-hidden min-h-[520px] max-h-[600px] min-w-0 w-full flex items-center justify-center">
+      <div className="bg-zinc-950/80 border border-zinc-800 rounded-2xl p-3 sm:p-4 overflow-y-auto overflow-x-hidden min-h-[340px] sm:min-h-[500px] max-h-none sm:max-h-[600px] min-w-0 w-full flex flex-col items-center justify-start sm:justify-center py-4 sm:py-6">
         {/* ============================================================== */}
         {/* TIKTOK WEB (DESKTOP) FEED SIMULATION                           */}
         {/* ============================================================== */}
