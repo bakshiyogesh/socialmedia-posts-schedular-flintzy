@@ -391,7 +391,7 @@ export function PlatformPreview({
                 )}
               </div>
               <p className="text-[11px] text-zinc-500 pt-0.5">View all 34 comments</p>
-              <p className="text-[9px] uppercase tracking-wider text-zinc-500">{timeDisplay.ago} · See translation</p>
+              <p className="text-[9px] uppercase tracking-wider text-zinc-500">  See translation</p>
             </div>
           </div>
         )}
