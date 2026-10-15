@@ -79,60 +79,48 @@ export function PlatformPreview({
       </div>
 
       {/* Simulated Preview Card */}
-      <div className="flex-1 bg-zinc-950/80 border border-zinc-800 rounded-2xl p-3 sm:p-4 overflow-y-auto overflow-x-hidden max-h-[500px] min-w-0 w-full flex items-center justify-center">
+      <div className="flex-1 bg-zinc-950/80 border border-zinc-800 rounded-2xl p-2 sm:p-3 overflow-y-auto overflow-x-hidden max-h-[620px] min-w-0 w-full flex items-center justify-center">
         {/* ============================================================== */}
-        {/* TIKTOK LIVE FEED SIMULATION (Authentic Smartphone Mockup)      */}
+        {/* TIKTOK LIVE FEED SIMULATION (Exact Pixel-Matched Mockup)       */}
         {/* ============================================================== */}
         {currentPlatform === 'tiktok' && (
-          <div className="relative h-[470px] w-[265px] bg-black rounded-[32px] border-[3px] border-zinc-800 shadow-2xl overflow-hidden flex flex-col justify-between text-white select-none shrink-0 ring-1 ring-zinc-700/50">
-            {/* Background Media Layer */}
-            {mediaUrl ? (
-              <div className="absolute inset-0 w-full h-full">
-                <ProgressiveImage src={mediaUrl} alt="TikTok Media" debounceMs={400} />
-                {/* Top & Bottom localized gradients (center remains bright and vivid) */}
-                <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none z-[1]" />
-                <div className="absolute bottom-0 inset-x-0 h-36 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none z-[1]" />
-              </div>
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-5 text-center bg-zinc-950/95 border border-dashed border-rose-900/60 z-[1]">
-                <div className="w-11 h-11 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-2.5">
-                  <PlatformIcon platform="tiktok" size={22} />
-                </div>
-                <span className="text-xs text-rose-400 font-bold">Media Required for TikTok</span>
-                <span className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
-                  TikTok feeds require vertical video or photo attachment to schedule.
-                </span>
-              </div>
-            )}
-
-            {/* Top Smartphone Bar & Header */}
-            <div className="relative z-10 pt-3 px-3.5 space-y-1">
-              {/* Status Bar */}
-              <div className="flex items-center justify-between text-[10px] font-semibold text-white/90 px-0.5">
-                <span>8:00</span>
+          <div className="relative h-[550px] w-[275px] bg-black rounded-[42px] border-[4px] border-zinc-800/90 shadow-2xl overflow-hidden flex flex-col justify-between text-white select-none shrink-0 ring-1 ring-white/10">
+            {/* Top Section: Status Bar & TikTok Header */}
+            <div className="relative z-30 pt-3 px-4 space-y-1 bg-gradient-to-b from-black/90 to-transparent pb-2">
+              {/* iOS Status Bar */}
+              <div className="flex items-center justify-between text-[11px] font-semibold text-white px-0.5">
+                <span className="tracking-tight">8:00</span>
                 <div className="flex items-center gap-1.5 text-[9px]">
-                  <span>5G</span>
+                  {/* Signal bars */}
+                  <div className="flex items-end gap-[1.5px] h-2.5">
+                    <div className="w-[2px] h-1 bg-white rounded-2xs" />
+                    <div className="w-[2px] h-1.5 bg-white rounded-2xs" />
+                    <div className="w-[2px] h-2 bg-white rounded-2xs" />
+                    <div className="w-[2px] h-2.5 bg-white rounded-2xs" />
+                  </div>
+                  <span className="font-bold">5G</span>
+                  {/* Battery */}
                   <div className="w-4 h-2 border border-white/80 rounded-[2px] p-[1px] flex items-center">
-                    <div className="w-2.5 h-full bg-white rounded-[1px]" />
+                    <div className="w-full h-full bg-white rounded-[1px]" />
                   </div>
                 </div>
               </div>
 
-              {/* Top Navigation: LIVE | Following | For You | Search */}
+              {/* TikTok Top Nav: LIVE | Following | For You | Search */}
               <div className="flex items-center justify-between pt-1">
                 {/* LIVE TV Badge */}
-                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/70 bg-black/30 backdrop-blur-sm text-[9px] font-black tracking-wider text-white">
+                <div className="flex items-center justify-center border-[1.5px] border-white/80 rounded-[5px] px-1.5 py-[1px] text-[9px] font-black tracking-wider text-white">
                   LIVE
                 </div>
 
                 {/* Following / For You Tabs */}
-                <div className="flex items-center gap-3.5 text-xs">
-                  <span className="text-white/60 hover:text-white cursor-pointer font-medium text-[12px] transition-colors">
+                <div className="flex items-center gap-4 text-xs">
+                  <span className="text-white/60 hover:text-white cursor-pointer font-medium text-[13px] transition-colors">
                     Following
                   </span>
                   <div className="flex flex-col items-center cursor-pointer">
-                    <span className="font-bold text-white text-[13px] tracking-wide">For You</span>
-                    <span className="w-4 h-[2px] bg-white rounded-full mt-0.5 shadow-sm" />
+                    <span className="font-bold text-white text-[14px] tracking-wide">For You</span>
+                    <span className="w-5 h-[2px] bg-white rounded-full mt-0.5 shadow-sm" />
                   </div>
                 </div>
 
@@ -147,87 +135,155 @@ export function PlatformPreview({
               </div>
             </div>
 
-            {/* Right-Side Vertical Floating Action Stack */}
-            <div className="relative z-10 flex-1 flex items-end justify-end px-2.5 pb-1 pointer-events-none">
-              <div className="flex flex-col items-center gap-2.5 pointer-events-auto">
-                {/* Creator Avatar with Red Plus Follow Badge */}
-                <div className="relative group cursor-pointer mb-0.5">
-                  <div className="w-9 h-9 rounded-full border-2 border-white overflow-hidden shadow-lg bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600 flex items-center justify-center font-bold text-xs text-white">
-                    {config.mockHandle.slice(1, 2).toUpperCase() || 'F'}
+            {/* Central Media Content (Pure Black Letterboxed for Photos) */}
+            <div className="relative flex-1 w-full bg-black flex items-center justify-center overflow-hidden my-auto">
+              {mediaUrl ? (
+                <div className="relative w-full aspect-[4/5] flex items-center justify-center bg-black">
+                  <ProgressiveImage src={mediaUrl} alt="TikTok Media" debounceMs={400} />
+                </div>
+              ) : (
+                <div className="w-full aspect-[4/5] flex flex-col items-center justify-center p-4 text-center bg-zinc-950 border-y border-zinc-800">
+                  <div className="w-10 h-10 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-2">
+                    <PlatformIcon platform="tiktok" size={20} />
                   </div>
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-[#FE2C55] text-white flex items-center justify-center shadow-md">
-                    <Plus className="w-2.5 h-2.5 stroke-[3]" />
-                  </div>
+                  <span className="text-xs text-rose-400 font-bold">Media Required for TikTok</span>
+                  <span className="text-[10px] text-zinc-400 mt-1">Photo or video attachment required</span>
                 </div>
+              )}
+            </div>
 
-                {/* Like Button */}
-                <div className="flex flex-col items-center group cursor-pointer">
-                  <Heart className="w-6 h-6 text-white drop-shadow-lg fill-white transition-transform group-hover:scale-110" />
-                  <span className="text-[10px] font-bold text-white drop-shadow mt-0.5">142.8K</span>
+            {/* Right Action Rail (Overlay) */}
+            <div className="absolute right-2.5 bottom-16 z-30 flex flex-col items-center gap-3">
+              {/* Avatar + Plus Follow Badge */}
+              <div className="relative cursor-pointer mb-0.5">
+                <div className="w-9 h-9 rounded-full bg-[#E04B2F] border-2 border-white flex items-center justify-center text-white font-bold text-sm shadow-md">
+                  {config.mockHandle.slice(1, 2).toUpperCase() || 'H'}
                 </div>
-
-                {/* Comment Button (TikTok speech bubble with 3 dots) */}
-                <div className="flex flex-col items-center group cursor-pointer">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white drop-shadow-lg transition-transform group-hover:scale-110">
-                    <path d="M12 2C6.477 2 2 6.03 2 11c0 2.68 1.34 5.08 3.44 6.72-.25 1.48-.96 2.92-1.95 4.02a.5.5 0 0 0 .51.81c2.42-.4 4.58-1.5 6-2.55.65.1 1.32.16 2 .16 5.523 0 10-4.03 10-9s-4.477-9-10-9z" />
-                    <circle cx="8" cy="11" r="1.1" fill="#000" />
-                    <circle cx="12" cy="11" r="1.1" fill="#000" />
-                    <circle cx="16" cy="11" r="1.1" fill="#000" />
-                  </svg>
-                  <span className="text-[10px] font-bold text-white drop-shadow mt-0.5">1,280</span>
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#FE2C55] text-white flex items-center justify-center shadow-md">
+                  <Plus className="w-2.5 h-2.5 stroke-[3]" />
                 </div>
+              </div>
 
-                {/* Bookmark Button */}
-                <div className="flex flex-col items-center group cursor-pointer">
-                  <Bookmark className="w-6 h-6 text-white drop-shadow-lg fill-white transition-transform group-hover:scale-110" />
-                  <span className="text-[10px] font-bold text-white drop-shadow mt-0.5">4,892</span>
-                </div>
+              {/* Heart Button */}
+              <div className="flex flex-col items-center cursor-pointer">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white" className="drop-shadow-md">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+                <span className="text-[10px] font-bold text-white drop-shadow mt-0.5 tracking-wider">...</span>
+              </div>
 
-                {/* Share Button (Curved Arrow) */}
-                <div className="flex flex-col items-center group cursor-pointer">
-                  <Share2 className="w-6 h-6 text-white drop-shadow-lg fill-white transition-transform group-hover:scale-110" />
-                  <span className="text-[10px] font-bold text-white drop-shadow mt-0.5">Share</span>
-                </div>
+              {/* Comments Button (Speech bubble with 3 dots) */}
+              <div className="flex flex-col items-center cursor-pointer">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white" className="drop-shadow-md">
+                  <path d="M12 2C6.48 2 2 6.03 2 11c0 2.68 1.34 5.08 3.44 6.72-.25 1.48-.96 2.92-1.95 4.02a.5.5 0 0 0 .51.81c2.42-.4 4.58-1.5 6-2.55.65.1 1.32.16 2 .16 5.52 0 10-4.03 10-9s-4.48-9-10-9z" />
+                  <circle cx="8" cy="11" r="1.1" fill="black" />
+                  <circle cx="12" cy="11" r="1.1" fill="black" />
+                  <circle cx="16" cy="11" r="1.1" fill="black" />
+                </svg>
+                <span className="text-[10px] font-bold text-white drop-shadow mt-0.5 tracking-wider">...</span>
+              </div>
 
-                {/* Authentic TikTok Spinning Vinyl Disc */}
-                <div className="relative pt-0.5 cursor-pointer">
-                  <div className="w-8 h-8 rounded-full bg-zinc-950 border-2 border-zinc-800 shadow-xl flex items-center justify-center animate-[spin_4s_linear_infinite]">
-                    <div className="w-6 h-6 rounded-full border border-zinc-700/60 flex items-center justify-center">
-                      <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 p-[2px] flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-950" />
-                      </div>
-                    </div>
+              {/* Bookmark Ribbon */}
+              <div className="flex flex-col items-center cursor-pointer">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" className="drop-shadow-md">
+                  <path d="M5 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v19l-7-4-7 4V3z" />
+                </svg>
+                <span className="text-[10px] font-bold text-white drop-shadow mt-0.5 tracking-wider">...</span>
+              </div>
+
+              {/* Share Curved Arrow */}
+              <div className="flex flex-col items-center cursor-pointer">
+                <svg width="23" height="23" viewBox="0 0 24 24" fill="white" className="drop-shadow-md">
+                  <path d="M14 4.5V9C7 10 4 15 3 20c2.5-3.5 6-5.1 11-5.1V19.5L22 12l-8-7.5z" />
+                </svg>
+                <span className="text-[10px] font-bold text-white drop-shadow mt-0.5 tracking-wider">...</span>
+              </div>
+
+              {/* Spinning Vinyl Record Disc */}
+              <div className="relative pt-0.5 cursor-pointer">
+                <div className="w-8 h-8 rounded-full bg-[#18181b] border-2 border-[#27272a] shadow-xl flex items-center justify-center animate-[spin_4s_linear_infinite] overflow-hidden relative">
+                  <div className="w-5 h-5 rounded-full border border-zinc-700/60 flex items-center justify-center z-10">
+                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-900 border border-zinc-600" />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bottom Overlay: Handle, Photo Badge, Caption, Audio */}
-            <div className="relative z-10 px-3.5 pb-3 space-y-1.5 pointer-events-none">
-              {/* Handle & Photo Badge */}
+            {/* Bottom Caption & Audio Overlay (Above Bottom Bar) */}
+            <div className="relative z-20 px-3.5 pb-2 space-y-1 bg-gradient-to-t from-black via-black/90 to-transparent pt-3 pr-14">
+              {/* Username + Photo Badge */}
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-bold text-xs text-white drop-shadow-md tracking-tight">
-                  {config.mockHandle}
+                <span className="font-bold text-xs text-white tracking-tight">
+                  {config.mockHandle.replace('@', '')}
                 </span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/40 backdrop-blur-md border border-white/20 text-[9px] font-semibold text-white shadow-sm">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-800/90 border border-zinc-700/60 text-[9px] font-semibold text-white shadow-sm">
                   <Camera className="w-2.5 h-2.5 text-white" />
                   <span>Photo</span>
                 </span>
               </div>
 
               {/* Caption Text */}
-              <p className="text-[11px] text-white/95 line-clamp-2 leading-relaxed drop-shadow-md break-words [overflow-wrap:anywhere] font-normal">
-                {effectiveContent || (
-                  <span className="text-zinc-300 italic">Caption preview will appear here...</span>
-                )}
-              </p>
+              {effectiveContent && (
+                <p className="text-[11px] text-white/95 line-clamp-2 leading-relaxed break-words [overflow-wrap:anywhere]">
+                  {effectiveContent}
+                </p>
+              )}
 
               {/* Audio Track Row */}
-              <div className="flex items-center gap-1.5 text-[10px] text-white/90 drop-shadow">
-                <Music2 className="w-3 h-3 text-white shrink-0 animate-pulse" />
-                <span className="truncate font-medium">
-                  Original sound - {config.mockHandle.replace('@', '')}
+              <div className="flex items-center gap-1.5 text-[10px] text-zinc-300 pt-0.5">
+                <Music2 className="w-2.5 h-2.5 text-white shrink-0" />
+                <span className="truncate">
+                  sound - {config.mockHandle.replace('@', '')} &nbsp;&nbsp; Original sound - {config.mockHandle.replace('@', '')}
                 </span>
+              </div>
+            </div>
+
+            {/* Bottom Navigation Bar (Home | Friends | '+' | Inbox | Me) */}
+            <div className="relative z-30 bg-black border-t border-zinc-900 px-3.5 py-2 flex items-center justify-between text-zinc-400">
+              {/* Home (Active) */}
+              <div className="flex flex-col items-center gap-0.5 cursor-pointer text-white">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+                </svg>
+                <span className="text-[9px] font-bold">Home</span>
+              </div>
+
+              {/* Friends */}
+              <div className="flex flex-col items-center gap-0.5 cursor-pointer hover:text-zinc-200">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                </svg>
+                <span className="text-[9px] font-medium">Friends</span>
+              </div>
+
+              {/* Iconic TikTok Create '+' Button (Cyan & Magenta Layers) */}
+              <div className="relative cursor-pointer mx-1">
+                <div className="w-9 h-6 rounded-md relative flex items-center justify-center">
+                  {/* Cyan left layer */}
+                  <div className="absolute inset-y-0 left-0 w-7 bg-[#25F4EE] rounded-md -translate-x-1" />
+                  {/* Magenta right layer */}
+                  <div className="absolute inset-y-0 right-0 w-7 bg-[#FE2C55] rounded-md translate-x-1" />
+                  {/* White center pill */}
+                  <div className="absolute inset-0 bg-white rounded-md flex items-center justify-center z-10">
+                    <Plus className="w-3.5 h-3.5 text-black stroke-[3]" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Inbox */}
+              <div className="flex flex-col items-center gap-0.5 cursor-pointer hover:text-zinc-200">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
+                </svg>
+                <span className="text-[9px] font-medium">Inbox</span>
+              </div>
+
+              {/* Me */}
+              <div className="flex flex-col items-center gap-0.5 cursor-pointer hover:text-zinc-200">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+                <span className="text-[9px] font-medium">Me</span>
               </div>
             </div>
           </div>
