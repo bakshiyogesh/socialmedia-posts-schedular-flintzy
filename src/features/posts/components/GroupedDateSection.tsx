@@ -8,6 +8,9 @@ import type { Post } from '@/types';
 
 interface GroupedDateSectionProps {
   group: DayGroup;
+  selectedPostIds?: string[];
+  onToggleSelect?: (id: string) => void;
+  onEdit?: (post: Post) => void;
   onDuplicate?: (post: Post) => void;
   onReschedule?: (post: Post) => void;
   onReconnect?: (post: Post) => void;
@@ -16,6 +19,9 @@ interface GroupedDateSectionProps {
 
 export function GroupedDateSection({
   group,
+  selectedPostIds = [],
+  onToggleSelect,
+  onEdit,
   onDuplicate,
   onReschedule,
   onReconnect,
@@ -62,6 +68,9 @@ export function GroupedDateSection({
           <PostCard
             key={post.id}
             post={post}
+            isSelected={selectedPostIds.includes(post.id)}
+            onToggleSelect={onToggleSelect}
+            onEdit={onEdit}
             onDuplicate={onDuplicate}
             onReschedule={onReschedule}
             onReconnect={onReconnect}

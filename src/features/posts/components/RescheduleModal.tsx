@@ -1,26 +1,30 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Clock, X, Check } from 'lucide-react';
+import { Clock, X, Check, CalendarClock } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { postsApi } from '../api/postsApi';
-import { POSTS_QUERY_KEY } from '../hooks/usePosts';
+import { POSTS_QUERY_KEY, useBulkRescheduleMutation } from '../hooks/usePosts';
 import { DateTimePicker } from '@/features/composer/components/DateTimePicker';
 import type { Post } from '@/types';
 import { toast } from 'sonner';
 
 interface RescheduleModalProps {
   post: Post | null;
+  postIds?: string[];
   onClose: () => void;
 }
 
-export function RescheduleModal({ post, onClose }: RescheduleModalProps) {
+export function RescheduleModal({ post, postIds = [], onClose }: RescheduleModalProps) {
   const queryClient = useQueryClient();
+  const bulkRescheduleMutation = useBulkRescheduleMutation();
+  const isBulk = postIds.length > 0;
+  
   const [scheduledAt, setScheduledAt] = useState<string>(() => {
     return post ? post.scheduledAt : new Date(Date.now() + 1000 * 60 * 60 * 2).toISOString();
   });
 
-  const rescheduleMutation = useMutation({
+  const singleRescheduleMutation = useMutation({
     mutationFn: ({ id, newTime }: { id: string; newTime: string }) =>
       postsApi.updatePost(id, { scheduledAt: newTime, status: 'scheduled', errorMessage: undefined }),
     onMutate: async ({ id, newTime }) => {
@@ -53,22 +57,34 @@ export function RescheduleModal({ post, onClose }: RescheduleModalProps) {
     },
   });
 
+  const isPending = singleRescheduleMutation.isPending || bulkRescheduleMutation.isPending;
+
   // Lock background scroll while the modal is open.
-  // Must run before the early return so hook order is stable across renders.
   React.useEffect(() => {
-    if (!post) return;
+    if (!post && !isBulk) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [post]);
+  }, [post, isBulk]);
 
-  if (!post) return null;
+  if (!post && !isBulk) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    rescheduleMutation.mutate({ id: post.id, newTime: scheduledAt });
+    if (isBulk) {
+      bulkRescheduleMutation.mutate(
+        { ids: postIds, newTime: scheduledAt },
+        {
+          onSuccess: () => {
+            onClose();
+          },
+        }
+      );
+    } else if (post) {
+      singleRescheduleMutation.mutate({ id: post.id, newTime: scheduledAt });
+    }
   };
 
   return (
@@ -81,11 +97,15 @@ export function RescheduleModal({ post, onClose }: RescheduleModalProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              <Clock className="w-5 h-5" />
+              {isBulk ? <CalendarClock className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-zinc-100">Reschedule Post</h3>
-              <p className="text-xs text-zinc-400">Select a new future timeslot</p>
+              <h3 className="text-sm font-bold text-zinc-100">
+                {isBulk ? `Reschedule ${postIds.length} Posts` : 'Reschedule Post'}
+              </h3>
+              <p className="text-xs text-zinc-400">
+                {isBulk ? 'Set a new future publishing timeslot for all selected items' : 'Select a new future timeslot'}
+              </p>
             </div>
           </div>
           <button
@@ -113,11 +133,17 @@ export function RescheduleModal({ post, onClose }: RescheduleModalProps) {
             </button>
             <button
               type="submit"
-              disabled={rescheduleMutation.isPending}
+              disabled={isPending}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 transition-colors shadow-lg shadow-indigo-600/25"
             >
               <Check className="w-4 h-4" />
-              <span>{rescheduleMutation.isPending ? 'Updating...' : 'Confirm Reschedule'}</span>
+              <span>
+                {isPending
+                  ? 'Updating...'
+                  : isBulk
+                  ? `Reschedule ${postIds.length} Posts`
+                  : 'Confirm Reschedule'}
+              </span>
             </button>
           </div>
         </form>

@@ -12,6 +12,8 @@ import { MonthCalendarView } from '@/features/calendar/components/MonthCalendarV
 import { PostComposerModal } from '@/features/composer/components/PostComposerModal';
 import { OAuthReconnectModal } from '@/features/posts/components/OAuthReconnectModal';
 import { RescheduleModal } from '@/features/posts/components/RescheduleModal';
+import { BulkActionsFloatingBar } from '@/features/posts/components/BulkActionsFloatingBar';
+import { useBulkDeleteMutation } from '@/features/posts/hooks/usePosts';
 import { filterPosts, computeStatusCounts } from '@/features/filters/utils/filterPosts';
 import type { FilterState, PlatformId, Post, PostStatus } from '@/types';
 
@@ -23,9 +25,14 @@ function DashboardContent() {
   const [viewMode, setViewMode] = useState<'queue' | 'calendar'>('queue');
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerPost, setComposerPost] = useState<Post | null>(null);
+  const [composerMode, setComposerMode] = useState<'create' | 'edit'>('create');
   const [composerInitialDate, setComposerInitialDate] = useState<string | null>(null);
   const [reconnectPost, setReconnectPost] = useState<Post | null>(null);
   const [reschedulePost, setReschedulePost] = useState<Post | null>(null);
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+  const [bulkRescheduleIds, setBulkRescheduleIds] = useState<string[]>([]);
+
+  const bulkDeleteMutation = useBulkDeleteMutation();
 
   // 1. Synchronize Filter State with URL Query Parameters
   const activePlatforms = useMemo<PlatformId[]>(() => {
@@ -130,6 +137,14 @@ function DashboardContent() {
 
   const handleDuplicate = (post: Post) => {
     setComposerPost(post);
+    setComposerMode('create');
+    setComposerInitialDate(null);
+    setIsComposerOpen(true);
+  };
+
+  const handleEdit = (post: Post) => {
+    setComposerPost(post);
+    setComposerMode('edit');
     setComposerInitialDate(null);
     setIsComposerOpen(true);
   };
@@ -140,20 +155,38 @@ function DashboardContent() {
       ...post,
       mediaUrl: 'https://images.unsplash.com/photo-1579869847514-7c1a19d2d2ad?w=800&auto=format&fit=crop&q=80',
     });
+    setComposerMode('create');
     setComposerInitialDate(null);
     setIsComposerOpen(true);
   };
 
   const handleOpenNew = () => {
     setComposerPost(null);
+    setComposerMode('create');
     setComposerInitialDate(null);
     setIsComposerOpen(true);
   };
 
   const handleScheduleForDate = (dateKey: string) => {
     setComposerPost(null);
+    setComposerMode('create');
     setComposerInitialDate(dateKey);
     setIsComposerOpen(true);
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedPostIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedPostIds.length === 0) return;
+    bulkDeleteMutation.mutate(selectedPostIds, {
+      onSuccess: () => {
+        setSelectedPostIds([]);
+      },
+    });
   };
 
   return (
@@ -279,6 +312,9 @@ function DashboardContent() {
               hasFilters={hasActiveFilters}
               onClearFilters={handleResetFilters}
               onOpenComposer={handleOpenNew}
+              selectedPostIds={selectedPostIds}
+              onToggleSelectPost={handleToggleSelect}
+              onEditPost={handleEdit}
               onDuplicatePost={handleDuplicate}
               onReschedulePost={(post) => setReschedulePost(post)}
               onReconnectAccount={(post) => setReconnectPost(post)}
@@ -288,13 +324,24 @@ function DashboardContent() {
         )}
       </main>
 
+      {/* Floating Bulk Actions Toolbar */}
+      <BulkActionsFloatingBar
+        selectedCount={selectedPostIds.length}
+        onReschedule={() => setBulkRescheduleIds(selectedPostIds)}
+        onDelete={handleBulkDelete}
+        onClear={() => setSelectedPostIds([])}
+        isDeleting={bulkDeleteMutation.isPending}
+      />
+
       {/* Post Composer Modal */}
       <PostComposerModal
         isOpen={isComposerOpen}
+        mode={composerMode}
         onClose={() => {
           setIsComposerOpen(false);
           setComposerPost(null);
           setComposerInitialDate(null);
+          setComposerMode('create');
         }}
         initialPost={composerPost}
         initialDate={composerInitialDate}
@@ -306,10 +353,15 @@ function DashboardContent() {
         onClose={() => setReconnectPost(null)}
       />
 
-      {/* Inline Reschedule Dialog */}
+      {/* Inline Reschedule Dialog (Supports Single & Bulk) */}
       <RescheduleModal
         post={reschedulePost}
-        onClose={() => setReschedulePost(null)}
+        postIds={bulkRescheduleIds}
+        onClose={() => {
+          setReschedulePost(null);
+          setBulkRescheduleIds([]);
+          if (bulkRescheduleIds.length > 0) setSelectedPostIds([]);
+        }}
       />
     </div>
   );

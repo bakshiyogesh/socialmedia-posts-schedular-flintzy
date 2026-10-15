@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { RefreshCw, Trash2, Copy, AlertCircle, Key, ImageOff, Zap, CalendarClock, Clock } from 'lucide-react';
+import { RefreshCw, Trash2, Copy, AlertCircle, Key, ImageOff, Zap, CalendarClock, Clock, Check, Edit3 } from 'lucide-react';
 import { PlatformIcon } from '@/components/shared/PlatformIcons';
 import { StatusBadge } from './StatusBadge';
 import { formatLocalDateTimeWithTz } from '@/lib/time';
@@ -12,6 +12,9 @@ import { ProgressiveImage } from '@/components/shared/ProgressiveImage';
 
 interface PostCardProps {
   post: Post;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
+  onEdit?: (post: Post) => void;
   onDuplicate?: (post: Post) => void;
   onReschedule?: (post: Post) => void;
   onReconnect?: (post: Post) => void;
@@ -20,6 +23,9 @@ interface PostCardProps {
 
 export function PostCard({
   post,
+  isSelected = false,
+  onToggleSelect,
+  onEdit,
   onDuplicate,
   onReschedule,
   onReconnect,
@@ -81,15 +87,37 @@ export function PostCard({
 
   return (
     <div
-      className={`group relative rounded-xl border p-4 sm:p-5 transition-all duration-200 overflow-hidden w-full ${isFailed
+      className={`group relative rounded-xl border p-4 sm:p-5 transition-all duration-200 overflow-hidden w-full ${
+        isSelected
+          ? 'ring-2 ring-indigo-500/80 bg-indigo-950/20 border-indigo-500/40 shadow-lg shadow-indigo-950/30'
+          : isFailed
           ? 'bg-rose-950/15 border-rose-900/40 hover:border-rose-700/60'
           : 'bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 hover:bg-zinc-900/90'
-        }`}
+      }`}
     >
       {/* Top Meta Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        {/* Platforms & Scheduled Time */}
+        {/* Selection Checkbox + Platforms & Scheduled Time */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {onToggleSelect && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelect(post.id);
+              }}
+              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                isSelected
+                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm'
+                  : 'border-zinc-700 bg-zinc-950/60 hover:border-zinc-500 text-transparent hover:text-zinc-500'
+              }`}
+              aria-label={`Select post ${post.id}`}
+              title={isSelected ? 'Deselect post' : 'Select post'}
+            >
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            </button>
+          )}
+
           <div className="flex items-center gap-1.5 bg-zinc-950/80 px-2.5 py-1 rounded-lg border border-zinc-800">
             {post.platforms.map((pid) => (
               <span
@@ -114,6 +142,18 @@ export function PostCard({
 
           {/* Quick Actions Menu */}
           <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+            {onEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(post)}
+                className="p-1.5 text-zinc-400 hover:text-indigo-300 hover:bg-zinc-800 rounded-md transition-colors"
+                title="Edit post"
+                aria-label="Edit post"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {onReschedule && (
               <button
                 type="button"

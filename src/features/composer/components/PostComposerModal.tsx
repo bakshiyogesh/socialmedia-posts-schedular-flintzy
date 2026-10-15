@@ -9,7 +9,7 @@ import { DateTimePicker } from './DateTimePicker';
 import { PlatformPreview } from './PlatformPreview';
 import { MediaUploader } from './MediaUploader';
 import { validatePost, type PostFormInput } from '../utils/validation';
-import { useCreatePostMutation } from '@/features/posts/hooks/usePosts';
+import { useCreatePostMutation, useUpdatePostMutation } from '@/features/posts/hooks/usePosts';
 import { PLATFORMS } from '@/config/platforms';
 import type { PlatformId, Post, DraftPost } from '@/types';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ interface PostComposerModalProps {
   onClose: () => void;
   initialPost?: Post | null;
   initialDate?: string | null;
+  mode?: 'create' | 'edit';
 }
 
 export function PostComposerModal({
@@ -31,6 +32,7 @@ export function PostComposerModal({
   onClose,
   initialPost,
   initialDate,
+  mode = 'create',
 }: PostComposerModalProps) {
   const [content, setContent] = useState('');
   const [platforms, setPlatforms] = useState<PlatformId[]>(DEFAULT_PLATFORMS);
@@ -171,6 +173,9 @@ export function PostComposerModal({
 
   const validation = useMemo(() => validatePost(formInput), [formInput]);
 
+  const isEditing = mode === 'edit' && !!initialPost;
+  const updateMutation = useUpdatePostMutation();
+
   const createMutation = useCreatePostMutation(() => {
     // Post is persisted: drop the draft and clear the form so the next open is blank.
     localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -178,26 +183,47 @@ export function PostComposerModal({
     onClose();
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!validation.isValid) {
       toast.error('Cannot schedule: Please resolve pre-flight issues.');
       return;
     }
-    createMutation.mutate(formInput);
-  };
+    if (isEditing && initialPost) {
+      updateMutation.mutate(
+        {
+          id: initialPost.id,
+          updates: {
+            ...formInput,
+            status: initialPost.status === 'failed' ? 'scheduled' : initialPost.status,
+            errorMessage: undefined,
+          },
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+            onClose();
+          },
+        }
+      );
+    } else {
+      createMutation.mutate(formInput);
+    }
+  }, [validation.isValid, isEditing, initialPost, updateMutation, formInput, resetForm, onClose, createMutation]);
 
   // Keyboard shortcut Ctrl/Cmd + Enter to schedule
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && isOpen && validation.isValid) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && isOpen && validation.isValid && !isPending) {
         e.preventDefault();
-        createMutation.mutate(formInput);
+        handleSubmit();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, validation.isValid, createMutation, formInput]);
+  }, [isOpen, validation.isValid, isPending, handleSubmit]);
 
   if (!isOpen) return null;
 
@@ -213,10 +239,12 @@ export function PostComposerModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/80 bg-zinc-900/60">
           <div>
             <h2 id="composer-title" className="text-base font-bold text-zinc-100">
-              {initialPost ? 'Duplicate Post' : 'New Multi-Channel Post'}
+              {isEditing ? 'Edit Scheduled Post' : initialPost ? 'Duplicate Post' : 'New Multi-Channel Post'}
             </h2>
             <p className="text-xs text-zinc-400">
-              One composer. Live pre-flight verification across all channel APIs.
+              {isEditing
+                ? 'Modify post copy, targeted channels, or scheduled timeslot.'
+                : 'One composer. Live pre-flight verification across all channel APIs.'}
             </p>
           </div>
 
@@ -377,12 +405,18 @@ export function PostComposerModal({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!validation.isValid || createMutation.isPending}
+              disabled={!validation.isValid || isPending}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-lg shadow-indigo-600/25 transition-all"
             >
               <Send className="w-3.5 h-3.5" />
               <span>
-                {createMutation.isPending ? 'Scheduling...' : 'Schedule Post'}
+                {isPending
+                  ? isEditing
+                    ? 'Saving Changes...'
+                    : 'Scheduling...'
+                  : isEditing
+                  ? 'Save Changes'
+                  : 'Schedule Post'}
               </span>
             </button>
           </div>
