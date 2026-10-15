@@ -58,8 +58,22 @@ export function PostComposerModal({
       setScheduledAt(source.scheduledAt);
     } else if (prefillDate) {
       const [y, m, d] = prefillDate.split('-').map(Number);
-      const target = new Date(y, m - 1, d, 10, 0, 0);
-      setScheduledAt(target.getTime() > Date.now() ? target.toISOString() : defaultScheduledAt());
+      const now = new Date();
+      const isToday =
+        now.getFullYear() === y &&
+        now.getMonth() === m - 1 &&
+        now.getDate() === d;
+
+      let target: Date;
+      if (isToday) {
+        target = new Date(now.getTime() + 1000 * 60 * 60 * 2);
+      } else {
+        target = new Date(y, m - 1, d, 10, 0, 0);
+        if (target.getTime() <= now.getTime()) {
+          target = new Date(y, m - 1, d, 12, 0, 0);
+        }
+      }
+      setScheduledAt(target.toISOString());
     } else {
       setScheduledAt(defaultScheduledAt());
     }

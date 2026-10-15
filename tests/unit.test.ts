@@ -103,6 +103,19 @@ describe('Timezone & Calendar Grouping', () => {
     expect(back.getMinutes()).toBe(45);
   });
 
+  it('correctly schedules a post for a clicked calendar date', () => {
+    const clickedDateKey = '2026-10-25';
+    const [y, m, d] = clickedDateKey.split('-').map(Number);
+    const scheduledDate = new Date(y, m - 1, d, 10, 0, 0);
+    const isoUtc = combineLocalDateTimeToUtc(scheduledDate, '14:30');
+    const result = new Date(isoUtc);
+    expect(result.getFullYear()).toBe(2026);
+    expect(result.getMonth()).toBe(9);
+    expect(result.getDate()).toBe(25);
+    expect(result.getHours()).toBe(14);
+    expect(result.getMinutes()).toBe(30);
+  });
+
   it('validates future vs past timestamps correctly', () => {
     const futureIso = new Date(Date.now() + 600000).toISOString();
     const pastIso = new Date(Date.now() - 600000).toISOString();

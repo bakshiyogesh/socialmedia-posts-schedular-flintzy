@@ -146,7 +146,10 @@ export function MonthCalendarView({
               <button
                 key={cell.dateKey}
                 type="button"
-                onClick={() => setSelectedDayKey(isSelected ? null : cell.dateKey)}
+                onClick={() => {
+                  setSelectedDayKey(cell.dateKey);
+                  onScheduleForDate?.(cell.dateKey!);
+                }}
                 className={`group min-h-[75px] sm:min-h-[90px] p-2 text-left transition-all flex flex-col justify-between ${
                   isSelected
                     ? 'bg-indigo-950/40 ring-2 ring-indigo-500 z-10'

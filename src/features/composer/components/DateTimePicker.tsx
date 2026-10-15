@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
-import { formatLocalDateTimeWithTz, getUserTimeZoneAbbr } from '@/lib/time';
+import { formatLocalDateTimeWithTz, getUserTimeZoneAbbr, combineLocalDateTimeToUtc } from '@/lib/time';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
-import { startOfDay } from 'date-fns';
+import { startOfDay, isSameDay } from 'date-fns';
 
 interface DateTimePickerProps {
   scheduledAtUtc?: string; // ISO UTC string
@@ -30,39 +30,55 @@ export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps
 
   const tzAbbr = getUserTimeZoneAbbr();
 
-  // Sync state whenever external scheduledAtUtc prop updates (e.g. restore draft, duplicate, reset)
+  // Sync state whenever external scheduledAtUtc prop updates (e.g. from calendar click, restore draft, duplicate, reset)
   useEffect(() => {
     if (!scheduledAtUtc) return;
     const d = new Date(scheduledAtUtc);
     if (!isNaN(d.getTime())) {
-      setSelectedDate((curr) => (curr.getTime() !== d.getTime() ? d : curr));
+      setSelectedDate(d);
       const hours = String(d.getHours()).padStart(2, '0');
       const minutes = String(d.getMinutes()).padStart(2, '0');
-      const nextTime = `${hours}:${minutes}`;
-      setTimeStr((curr) => (curr !== nextTime ? nextTime : curr));
+      setTimeStr(`${hours}:${minutes}`);
     }
   }, [scheduledAtUtc]);
 
-  // Recompute UTC when date or time changes
-  useEffect(() => {
-    if (!selectedDate || !timeStr) return;
-    try {
-      const [hours, minutes] = timeStr.split(':').map(Number);
-      if (hours !== undefined && minutes !== undefined) {
-        const localDate = new Date(
-          selectedDate.getFullYear(),
-          selectedDate.getMonth(),
-          selectedDate.getDate(),
-          hours,
-          minutes,
-          0
-        );
-        onChange(localDate.toISOString());
-      }
-    } catch {
-      // Ignore parse errors
+  // Handle direct selection from DatePicker calendar popover
+  const handleDateSelect = (newDate: Date) => {
+    setSelectedDate(newDate);
+
+    let [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) {
+      hours = 10;
+      minutes = 0;
     }
-  }, [selectedDate, timeStr, onChange]);
+
+    const now = new Date();
+    // If selecting today and the current time is in the past, advance to next reasonable future slot (+1 hour)
+    if (isSameDay(newDate, now)) {
+      const candidate = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate(), hours, minutes, 0);
+      if (candidate.getTime() <= now.getTime()) {
+        const adjusted = new Date(now.getTime() + 60 * 60 * 1000);
+        hours = adjusted.getHours();
+        minutes = adjusted.getMinutes();
+        setTimeStr(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+      }
+    }
+
+    const isoUtc = combineLocalDateTimeToUtc(
+      newDate,
+      `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+    );
+    onChange(isoUtc);
+  };
+
+  // Handle time change from TimePicker
+  const handleTimeChange = (newTime: string) => {
+    setTimeStr(newTime);
+    if (selectedDate && newTime) {
+      const isoUtc = combineLocalDateTimeToUtc(selectedDate, newTime);
+      onChange(isoUtc);
+    }
+  };
 
   // Suggested posting times (AI / High-engagement slots)
   const suggestions = [
@@ -105,7 +121,9 @@ export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps
     setSelectedDate(d);
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
-    setTimeStr(`${hours}:${minutes}`);
+    const nextTime = `${hours}:${minutes}`;
+    setTimeStr(nextTime);
+    onChange(d.toISOString());
   };
 
   return (
@@ -133,7 +151,7 @@ export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps
           </span>
           <DatePicker
             date={selectedDate}
-            onSelect={(newDate) => setSelectedDate(newDate)}
+            onSelect={handleDateSelect}
             disabledBefore={startOfDay(new Date())}
             placeholder="Select publish date"
           />
@@ -147,7 +165,7 @@ export function DateTimePicker({ scheduledAtUtc, onChange }: DateTimePickerProps
           </span>
           <TimePicker
             timeStr={timeStr}
-            onChange={(newTime) => setTimeStr(newTime)}
+            onChange={handleTimeChange}
             placeholder="Select publish time"
           />
         </div>
