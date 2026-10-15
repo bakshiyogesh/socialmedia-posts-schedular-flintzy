@@ -161,9 +161,9 @@ function DashboardContent() {
                 <span className="font-bold text-base tracking-tight text-white">
                   Flintzy
                 </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                {/* <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   Scheduler
-                </span>
+                </span> */}
               </div>
               <p className="text-[11px] text-zinc-400 hidden sm:block">
                 Never publish something broken.
@@ -178,11 +178,10 @@ function DashboardContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('queue')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  viewMode === 'queue'
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'queue'
                     ? 'bg-zinc-800 text-zinc-100 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-200'
-                }`}
+                  }`}
               >
                 <Layers className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Timeline</span>
@@ -190,11 +189,10 @@ function DashboardContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('calendar')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  viewMode === 'calendar'
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'calendar'
                     ? 'bg-zinc-800 text-zinc-100 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-200'
-                }`}
+                  }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Month</span>

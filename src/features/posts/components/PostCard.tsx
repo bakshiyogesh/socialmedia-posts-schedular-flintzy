@@ -81,11 +81,10 @@ export function PostCard({
 
   return (
     <div
-      className={`group relative rounded-xl border p-4 sm:p-5 transition-all duration-200 overflow-hidden w-full ${
-        isFailed
+      className={`group relative rounded-xl border p-4 sm:p-5 transition-all duration-200 overflow-hidden w-full ${isFailed
           ? 'bg-rose-950/15 border-rose-900/40 hover:border-rose-700/60'
           : 'bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 hover:bg-zinc-900/90'
-      }`}
+        }`}
     >
       {/* Top Meta Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -177,25 +176,25 @@ export function PostCard({
 
       {/* Failure Recovery Strip */}
       {isFailed && (
-        <div className="mt-4 pt-3 border-t border-rose-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start sm:items-center gap-2">
+        <div className="mt-4 pt-3 border-t border-rose-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${errorConfig.bg}`}
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${errorConfig.bg}`}
             >
-              <ErrorIcon className="w-3 h-3" />
-              {errorConfig.label}
+              <ErrorIcon className="w-3.5 h-3.5 shrink-0" />
+              <span>{errorConfig.label}</span>
             </span>
-            <p className="text-xs text-rose-300/90 line-clamp-1" title={post.errorMessage}>
+            <p className="text-xs text-rose-300/90 truncate min-w-0 flex-1" title={post.errorMessage}>
               {post.errorMessage}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
             {/* Contextual CTA (e.g. Reconnect Token, Fix Dimensions, Reschedule Slot) */}
             <button
               type="button"
               onClick={errorConfig.onAction}
-              className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-medium border border-zinc-700 transition-colors"
+              className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-medium border border-zinc-700 transition-colors whitespace-nowrap shrink-0"
             >
               {errorConfig.ctaText}
             </button>
@@ -205,11 +204,11 @@ export function PostCard({
               type="button"
               onClick={handleRetry}
               disabled={isRetrying}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-800 text-white rounded-lg text-xs font-medium shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-500"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-800 text-white rounded-lg text-xs font-medium shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-500 whitespace-nowrap shrink-0"
               aria-label={`Retry failed post ${post.id}`}
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`}
+                className={`w-3.5 h-3.5 shrink-0 ${isRetrying ? 'animate-spin' : ''}`}
                 aria-hidden="true"
               />
               <span>{isRetrying ? 'Retrying (1s)...' : 'Retry Now'}</span>

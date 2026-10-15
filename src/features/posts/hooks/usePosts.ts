@@ -55,11 +55,11 @@ export function useRetryPostMutation() {
           previousPosts.map((p) =>
             p.id === id
               ? {
-                  ...p,
-                  status: 'scheduled',
-                  errorMessage: undefined,
-                  errorType: undefined,
-                }
+                ...p,
+                status: 'scheduled',
+                errorMessage: undefined,
+                errorType: undefined,
+              }
               : p
           )
         );
