@@ -1,4 +1,3 @@
-import React from 'react';
 import type { PlatformId } from '@/types';
 
 export interface PlatformConfig {

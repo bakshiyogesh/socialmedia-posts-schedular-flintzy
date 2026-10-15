@@ -59,6 +59,50 @@ describe('Timezone & Calendar Grouping', () => {
     expect(label).toBe('Earlier');
   });
 
+  it('orders groups Today → Tomorrow → future dates → Earlier, posts chronological within a day', () => {
+    const ref = new Date(2026, 9, 15, 12, 0, 0);
+    const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).toISOString();
+    const make = (id: string, scheduledAt: string): Post => ({
+      id,
+      content: id,
+      platforms: ['x'],
+      scheduledAt,
+      status: 'scheduled',
+      createdAt: scheduledAt,
+      updatedAt: scheduledAt,
+    });
+
+    const groups = groupPostsByDay(
+      [
+        make('past', at(12, 9)),
+        make('future-20', at(20, 9)),
+        make('today-late', at(15, 23, 30)),
+        make('tomorrow', at(16, 8)),
+        make('future-18', at(18, 9)),
+        make('today-early', at(15, 13)),
+      ],
+      ref
+    );
+
+    expect(groups.map((g) => g.label)[0]).toBe('Today');
+    expect(groups.map((g) => g.label)[1]).toBe('Tomorrow');
+    expect(groups[2].label).toContain('Oct 18');
+    expect(groups[3].label).toContain('Oct 20');
+    expect(groups[groups.length - 1].label).toBe('Earlier');
+    expect(groups[0].posts.map((p) => p.id)).toEqual(['today-early', 'today-late']);
+  });
+
+  it('converts a local date + HH:mm into a UTC ISO string that round-trips to the same local time', () => {
+    const iso = combineLocalDateTimeToUtc(new Date(2026, 9, 15), '18:45');
+    expect(iso.endsWith('Z')).toBe(true);
+    const back = new Date(iso);
+    expect(back.getFullYear()).toBe(2026);
+    expect(back.getMonth()).toBe(9);
+    expect(back.getDate()).toBe(15);
+    expect(back.getHours()).toBe(18);
+    expect(back.getMinutes()).toBe(45);
+  });
+
   it('validates future vs past timestamps correctly', () => {
     const futureIso = new Date(Date.now() + 600000).toISOString();
     const pastIso = new Date(Date.now() - 600000).toISOString();

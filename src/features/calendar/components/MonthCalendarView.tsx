@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Layers } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { PostCard } from '@/features/posts/components/PostCard';
-import { PLATFORMS } from '@/config/platforms';
 import type { Post } from '@/types';
 
 interface MonthCalendarViewProps {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Plus, Layers, Calendar, ListFilter } from 'lucide-react';
+import { Plus, Layers, Calendar } from 'lucide-react';
 import { usePostsQuery } from '@/features/posts/hooks/usePosts';
 import { StatusSummaryStrip } from '@/features/posts/components/StatusSummaryStrip';
 import { BulkRetryBanner } from '@/features/posts/components/BulkRetryBanner';

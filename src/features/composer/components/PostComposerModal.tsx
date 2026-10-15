@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Send, Image, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Send, Image as ImageIcon, SlidersHorizontal } from 'lucide-react';
 import { PlatformSelector } from './PlatformSelector';
 import { CharacterCounters } from './CharacterCounters';
 import { PreFlightPanel } from './PreFlightPanel';
@@ -301,7 +301,7 @@ export function PostComposerModal({
 
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-                  <Image className="w-4 h-4" />
+                  <ImageIcon className="w-4 h-4" />
                 </div>
                 <input
                   type="url"

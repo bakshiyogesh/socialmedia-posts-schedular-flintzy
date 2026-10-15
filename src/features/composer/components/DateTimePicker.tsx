@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, Sparkles } from 'lucide-react';
-import { combineLocalDateTimeToUtc, formatLocalDateTimeWithTz, getUserTimeZoneAbbr } from '@/lib/time';
+import { formatLocalDateTimeWithTz, getUserTimeZoneAbbr } from '@/lib/time';
 
 interface DateTimePickerProps {
   scheduledAtUtc?: string; // ISO UTC string

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { PlatformIcon } from '@/components/shared/PlatformIcons';
-import { PLATFORMS } from '@/config/platforms';
 import type { PlatformId } from '@/types';
 
 interface CharacterCountersProps {
@@ -27,7 +26,6 @@ export function CharacterCounters({
     >
       {selectedPlatforms.map((pid) => {
         const stats = charCounts[pid];
-        const config = PLATFORMS[pid];
         const isNearLimit = stats.remaining <= 30 && !stats.isOver;
 
         return (

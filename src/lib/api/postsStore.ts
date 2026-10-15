@@ -3,7 +3,6 @@ import type { Post } from '@/types';
 
 // In-memory persistent store across hot reloads in dev
 declare global {
-  // eslint-disable-next-line no-var
   var __FLINTZY_POSTS_STORE__: Post[] | undefined;
 }
 
