@@ -393,6 +393,7 @@ export function PostComposerModal({
               content={content}
               mediaUrl={mediaUrl}
               overrides={overrides}
+              scheduledAt={scheduledAt}
             />
           </div>
         </form>

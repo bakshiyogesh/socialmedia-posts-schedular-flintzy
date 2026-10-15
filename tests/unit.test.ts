@@ -6,6 +6,7 @@ import {
   groupPostsByDay,
   isFutureDate,
   combineLocalDateTimeToUtc,
+  formatSocialTimestamp,
 } from '@/lib/time';
 
 import {
@@ -303,5 +304,40 @@ describe('Media Utilities & Progressive Loader', () => {
     expect(isVideoMedia('https://example.com/clip.mov?download=true')).toBe(true);
     expect(isVideoMedia('https://example.com/photo.jpg')).toBe(false);
     expect(isVideoMedia('data:image/png;base64,iVBOR')).toBe(false);
+  });
+});
+
+describe('Social Media Timestamp Formatting', () => {
+  const base = new Date('2026-10-15T12:00:00.000Z');
+
+  it('formats short relative notations (1hr ago, 1d, 2d, 1w, 1mo, 1yr)', () => {
+    // 1 hour ago
+    const oneHour = new Date(base.getTime() - 1000 * 60 * 60);
+    expect(formatSocialTimestamp(oneHour, base).short).toBe('1hr ago');
+
+    // 1 day ago / ahead
+    const oneDay = new Date(base.getTime() - 1000 * 60 * 60 * 24);
+    expect(formatSocialTimestamp(oneDay, base).short).toBe('1d');
+
+    // 2 days ago / ahead
+    const twoDays = new Date(base.getTime() - 1000 * 60 * 60 * 48);
+    expect(formatSocialTimestamp(twoDays, base).short).toBe('2d');
+
+    // 1 week ago / ahead
+    const oneWeek = new Date(base.getTime() - 1000 * 60 * 60 * 24 * 7);
+    expect(formatSocialTimestamp(oneWeek, base).short).toBe('1w');
+
+    // 1 month ago / ahead
+    const oneMonth = new Date(base.getTime() - 1000 * 60 * 60 * 24 * 31);
+    expect(formatSocialTimestamp(oneMonth, base).short).toBe('1mo');
+
+    // 1 year ago / ahead
+    const oneYear = new Date(base.getTime() - 1000 * 60 * 60 * 24 * 366);
+    expect(formatSocialTimestamp(oneYear, base).short).toBe('1yr');
+  });
+
+  it('provides full suffix string for bottom caption previews', () => {
+    const twoDays = new Date(base.getTime() - 1000 * 60 * 60 * 48);
+    expect(formatSocialTimestamp(twoDays, base).ago).toBe('2d ago');
   });
 });

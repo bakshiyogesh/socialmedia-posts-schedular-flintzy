@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { PlatformId } from '@/types';
 import { ProgressiveImage } from '@/components/shared/ProgressiveImage';
+import { formatSocialTimestamp } from '@/lib/time';
 
 export function InstagramVerifiedBadge({ size = 12 }: { size?: number }) {
   return (
@@ -129,6 +130,7 @@ interface PlatformPreviewProps {
   content: string;
   mediaUrl?: string;
   overrides?: Partial<Record<PlatformId, { content?: string }>>;
+  scheduledAt?: string;
 }
 
 export function PlatformPreview({
@@ -136,6 +138,7 @@ export function PlatformPreview({
   content,
   mediaUrl,
   overrides,
+  scheduledAt,
 }: PlatformPreviewProps) {
   const [activeTab, setActiveTab] = useState<PlatformId>(
     selectedPlatforms[0] || 'x'
@@ -156,6 +159,7 @@ export function PlatformPreview({
 
   const effectiveContent = overrides?.[currentPlatform]?.content || content;
   const config = PLATFORMS[currentPlatform];
+  const timeDisplay = formatSocialTimestamp(scheduledAt);
 
   return (
     <div className="flex flex-col min-w-0 w-full space-y-3">
@@ -230,13 +234,13 @@ export function PlatformPreview({
               {/* Bottom Video Overlay: Creator Info, Caption & Sound */}
               <div className="relative z-10 p-3.5 space-y-1.5">
                 {/* Creator Handle + Verified Badge + Timestamp */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-bold text-xs text-white drop-shadow tracking-tight">
+                <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
+                  <span className="font-bold text-xs text-white drop-shadow tracking-tight truncate">
                     {config.mockHandle.replace('@', '')}
                   </span>
                   <TikTokVerifiedBadge size={13} />
-                  <span className="text-[11px] text-zinc-300 font-medium drop-shadow">
-                    · Just now
+                  <span className="text-[11px] text-zinc-300 font-medium drop-shadow shrink-0">
+                    · {timeDisplay.short}
                   </span>
                 </div>
 
@@ -336,15 +340,17 @@ export function PlatformPreview({
                     F
                   </div>
                 </div>
-                <div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-bold text-white">{config.mockHandle}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
+                    <span className="text-xs font-bold text-white truncate">{config.mockHandle}</span>
                     <InstagramVerifiedBadge size={12} />
+                    <span className="text-zinc-500 text-xs shrink-0">•</span>
+                    <span className="text-xs text-zinc-400 font-normal shrink-0">{timeDisplay.short}</span>
                   </div>
-                  <p className="text-[10px] text-zinc-400">Flintzy Creators Studio</p>
+                  <p className="text-[10px] text-zinc-400 truncate">Flintzy Creators Studio</p>
                 </div>
               </div>
-              <button type="button" aria-label="Post options" className="text-zinc-400 hover:text-white p-1">
+              <button type="button" aria-label="Post options" className="text-zinc-400 hover:text-white p-1 shrink-0">
                 <MoreHorizontal className="w-4 h-4" />
               </button>
             </div>
@@ -385,7 +391,7 @@ export function PlatformPreview({
                 )}
               </div>
               <p className="text-[11px] text-zinc-500 pt-0.5">View all 34 comments</p>
-              <p className="text-[9px] uppercase tracking-wider text-zinc-600">2 HOURS AGO · See translation</p>
+              <p className="text-[9px] uppercase tracking-wider text-zinc-500">{timeDisplay.ago} · See translation</p>
             </div>
           </div>
         )}
@@ -401,15 +407,15 @@ export function PlatformPreview({
                 F
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold text-sm text-zinc-100">Flintzy</span>
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-nowrap overflow-hidden">
+                    <span className="font-bold text-sm text-zinc-100 shrink-0">Flintzy</span>
                     <XVerifiedBadge size={15} />
-                    <span className="text-xs text-zinc-400 font-mono">{config.mockHandle}</span>
-                    <span className="text-zinc-600">·</span>
-                    <span className="text-xs text-zinc-500">Just now</span>
+                    <span className="text-xs text-zinc-400 font-mono truncate">{config.mockHandle}</span>
+                    <span className="text-zinc-500 shrink-0">·</span>
+                    <span className="text-xs text-zinc-400 shrink-0">{timeDisplay.short}</span>
                   </div>
-                  <MoreHorizontal className="w-4 h-4 text-zinc-500 hover:text-zinc-300 cursor-pointer" />
+                  <MoreHorizontal className="w-4 h-4 text-zinc-500 hover:text-zinc-300 cursor-pointer shrink-0" />
                 </div>
 
                 {/* Post Text */}
@@ -465,15 +471,17 @@ export function PlatformPreview({
                 <div className="w-10 h-10 rounded-full bg-[#1877F2] flex items-center justify-center font-bold text-white text-base shrink-0 shadow">
                   F
                 </div>
-                <div>
-                  <div className="flex items-center gap-1">
-                    <p className="text-xs font-bold text-zinc-100">{config.mockHandle.replace('@', '')} Page</p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
+                    <p className="text-xs font-bold text-zinc-100 truncate">{config.mockHandle.replace('@', '')} Page</p>
                     <FacebookVerifiedBadge size={13} />
+                    <span className="text-zinc-500 text-xs shrink-0">·</span>
+                    <span className="text-xs text-zinc-400 shrink-0">{timeDisplay.short}</span>
                   </div>
-                  <p className="text-[10px] text-zinc-400">Just now · 🌎 Public</p>
+                  <p className="text-[10px] text-zinc-400">{timeDisplay.ago} · 🌎 Public</p>
                 </div>
               </div>
-              <MoreHorizontal className="w-4 h-4 text-zinc-500 hover:text-zinc-300 cursor-pointer" />
+              <MoreHorizontal className="w-4 h-4 text-zinc-500 hover:text-zinc-300 cursor-pointer shrink-0" />
             </div>
 
             {/* Post Content */}
@@ -534,17 +542,19 @@ export function PlatformPreview({
                 <div className="w-10 h-10 rounded-lg bg-[#0A66C2] flex items-center justify-center font-bold text-white text-base shrink-0 shadow">
                   in
                 </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-bold text-zinc-100">{config.mockHandle}</p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
+                    <p className="text-xs font-bold text-zinc-100 truncate">{config.mockHandle}</p>
                     <LinkedInVerifiedBadge size={13} />
-                    <span className="text-[10px] text-zinc-400 font-medium">• 1st</span>
+                    <span className="text-[10px] text-zinc-400 font-medium shrink-0">• 1st</span>
+                    <span className="text-zinc-500 text-xs shrink-0">•</span>
+                    <span className="text-xs text-zinc-400 shrink-0">{timeDisplay.short}</span>
                   </div>
-                  <p className="text-[10px] text-zinc-400">Social Media Operations & Automation</p>
-                  <p className="text-[10px] text-zinc-500">1h • 🌐</p>
+                  <p className="text-[10px] text-zinc-400 truncate">Social Media Operations & Automation</p>
+                  <p className="text-[10px] text-zinc-500">{timeDisplay.short} • 🌐</p>
                 </div>
               </div>
-              <MoreHorizontal className="w-4 h-4 text-zinc-500 hover:text-zinc-300 cursor-pointer" />
+              <MoreHorizontal className="w-4 h-4 text-zinc-500 hover:text-zinc-300 cursor-pointer shrink-0" />
             </div>
 
             {/* Post Content */}
