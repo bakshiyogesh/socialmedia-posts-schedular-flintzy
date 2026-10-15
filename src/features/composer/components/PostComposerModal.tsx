@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Send, Image as ImageIcon, SlidersHorizontal } from 'lucide-react';
 import { PlatformSelector } from './PlatformSelector';
 import { CharacterCounters } from './CharacterCounters';
@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import { ProgressiveImage, type ImageLoadState } from '@/components/shared/ProgressiveImage';
 
 const DRAFT_STORAGE_KEY = 'flintzy_composer_draft';
+const DEFAULT_PLATFORMS: PlatformId[] = ['x', 'instagram'];
+const defaultScheduledAt = () => new Date(Date.now() + 1000 * 60 * 60 * 2).toISOString();
 
 interface PostComposerModalProps {
   isOpen: boolean;
@@ -28,27 +30,54 @@ export function PostComposerModal({
   initialPost,
 }: PostComposerModalProps) {
   const [content, setContent] = useState('');
-  const [platforms, setPlatforms] = useState<PlatformId[]>(['x', 'instagram']);
+  const [platforms, setPlatforms] = useState<PlatformId[]>(DEFAULT_PLATFORMS);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaLoadState, setMediaLoadState] = useState<ImageLoadState>('idle');
-  const [scheduledAt, setScheduledAt] = useState<string>(() => {
-    // Default +2 hours in future
-    return new Date(Date.now() + 1000 * 60 * 60 * 2).toISOString();
-  });
+  // Default +2 hours in future
+  const [scheduledAt, setScheduledAt] = useState<string>(defaultScheduledAt);
   const [overrides, setOverrides] = useState<Partial<Record<PlatformId, { content?: string }>>>({});
   const [showOverrides, setShowOverrides] = useState(false);
   const [hasDraftPrompt, setHasDraftPrompt] = useState(false);
 
-  // Sync initialPost if duplicating
+  /**
+   * The modal stays mounted while closed, so state must be reset explicitly.
+   * Prefills from `source` when duplicating, otherwise returns to a blank form.
+   */
+  const resetForm = useCallback((source?: Post | null) => {
+    setContent(source?.content ?? '');
+    setPlatforms(source?.platforms ?? DEFAULT_PLATFORMS);
+    setMediaUrl(source?.mediaUrl ?? '');
+    setMediaLoadState('idle');
+    setScheduledAt(defaultScheduledAt());
+    setOverrides(source?.platformOverrides ?? {});
+    setShowOverrides(false);
+    setHasDraftPrompt(false);
+  }, []);
+
+  // Start every open from a clean slate (or the duplicated post),
+  // then offer to restore an unsent draft for brand-new posts.
+  // Also clear on close so stale state never leaks into the next session
+  // (unsent work is already persisted by the autosave below).
   useEffect(() => {
-    if (initialPost) {
-      setContent(initialPost.content);
-      setPlatforms(initialPost.platforms);
-      setMediaUrl(initialPost.mediaUrl || '');
-      setScheduledAt(new Date(Date.now() + 1000 * 60 * 60 * 2).toISOString());
-      setOverrides(initialPost.platformOverrides || {});
+    if (!isOpen) {
+      resetForm();
+      return;
     }
-  }, [initialPost]);
+    resetForm(initialPost);
+
+    if (initialPost) return;
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) {
+        const draft: DraftPost = JSON.parse(saved);
+        if (draft.content || draft.mediaUrl) {
+          setHasDraftPrompt(true);
+        }
+      }
+    } catch {
+      // Ignore JSON error
+    }
+  }, [isOpen, initialPost, resetForm]);
 
   // Lock background scroll when modal is open
   useEffect(() => {
@@ -61,26 +90,9 @@ export function PostComposerModal({
     }
   }, [isOpen]);
 
-  // Check for saved draft on mount if not editing an existing post
+  // Autosave draft to localStorage (only while open, and only when there is real work to save)
   useEffect(() => {
-    if (!initialPost && isOpen) {
-      try {
-        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
-        if (saved) {
-          const draft: DraftPost = JSON.parse(saved);
-          if (draft.content || draft.mediaUrl) {
-            setHasDraftPrompt(true);
-          }
-        }
-      } catch {
-        // Ignore JSON error
-      }
-    }
-  }, [isOpen, initialPost]);
-
-  // Autosave draft to localStorage
-  useEffect(() => {
-    if (!initialPost && (content || mediaUrl || platforms.length > 0)) {
+    if (isOpen && !initialPost && (content.trim() || mediaUrl.trim())) {
       const draft: DraftPost = {
         content,
         platforms,
@@ -91,7 +103,7 @@ export function PostComposerModal({
       };
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
     }
-  }, [content, platforms, mediaUrl, scheduledAt, overrides, initialPost]);
+  }, [isOpen, content, platforms, mediaUrl, scheduledAt, overrides, initialPost]);
 
   const restoreDraft = () => {
     try {
@@ -141,7 +153,9 @@ export function PostComposerModal({
   const validation = useMemo(() => validatePost(formInput), [formInput]);
 
   const createMutation = useCreatePostMutation(() => {
+    // Post is persisted: drop the draft and clear the form so the next open is blank.
     localStorage.removeItem(DRAFT_STORAGE_KEY);
+    resetForm();
     onClose();
   });
 
