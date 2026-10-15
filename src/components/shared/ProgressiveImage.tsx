@@ -119,6 +119,7 @@ export function ProgressiveImage({
           src={debouncedSrc}
           alt={alt}
           decoding="async"
+          loading="lazy"
           onLoad={() => setState('loaded')}
           onError={() => setState('error')}
           className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out ${

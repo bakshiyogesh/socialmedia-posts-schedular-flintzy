@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
-import { RefreshCw, Trash2, Copy, AlertCircle, Key, ImageOff, Zap, CalendarClock, Clock, Edit3 } from 'lucide-react';
+import React from 'react';
+import { RefreshCw, Trash2, Copy, AlertCircle, Key, ImageOff, Zap, CalendarClock, Clock } from 'lucide-react';
 import { PlatformIcon } from '@/components/shared/PlatformIcons';
 import { StatusBadge } from './StatusBadge';
 import { formatLocalDateTimeWithTz } from '@/lib/time';
 import { useRetryPostMutation, useDeletePostMutation } from '../hooks/usePosts';
 import { PLATFORMS } from '@/config/platforms';
 import type { Post, ErrorCategory } from '@/types';
+import { ProgressiveImage } from '@/components/shared/ProgressiveImage';
 
 interface PostCardProps {
   post: Post;
@@ -26,7 +27,6 @@ export function PostCard({
 }: PostCardProps) {
   const retryMutation = useRetryPostMutation();
   const deleteMutation = useDeletePostMutation();
-  const [imgError, setImgError] = useState(false);
 
   const isRetrying = retryMutation.isPending && retryMutation.variables === post.id;
   const isFailed = post.status === 'failed';
@@ -167,21 +167,10 @@ export function PostCard({
 
         {/* Optional Media Thumbnail */}
         {post.mediaUrl && (
-          <div className="relative w-full sm:w-32 h-44 sm:h-28 rounded-xl overflow-hidden border border-zinc-800 shrink-0 bg-zinc-950 flex items-center justify-center self-start shadow-md">
-            {!imgError ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={post.mediaUrl}
-                alt="Post attachment preview"
-                className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-200"
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-2 text-center text-zinc-500 text-[10px] w-full h-full">
-                <ImageOff className="w-4 h-4 mb-1 text-zinc-600" />
-                <span>Preview unavailable</span>
-              </div>
-            )}
+          <div className="relative w-full sm:w-32 h-44 sm:h-28 rounded-xl overflow-hidden border border-zinc-800 shrink-0 bg-zinc-950 self-start shadow-md">
+            <div className="w-full h-full transition-transform duration-200 group-hover:scale-105">
+              <ProgressiveImage src={post.mediaUrl} alt="Post attachment preview" />
+            </div>
           </div>
         )}
       </div>
