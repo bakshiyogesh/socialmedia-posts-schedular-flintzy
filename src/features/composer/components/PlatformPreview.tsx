@@ -424,6 +424,81 @@ export function PlatformPreview({
             </div>
           </div>
         )}
+
+        {/* ============================================================== */}
+        {/* LINKEDIN LIVE FEED SIMULATION (Authentic Professional Post)     */}
+        {/* ============================================================== */}
+        {currentPlatform === 'linkedin' && (
+          <div className="w-full max-w-md bg-zinc-900/60 rounded-2xl border border-zinc-800 p-4 text-white shadow-xl space-y-3 min-w-0">
+            {/* Header: Company Avatar, Name, Followers & Time */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-lg bg-[#0A66C2] flex items-center justify-center font-bold text-white text-base shrink-0 shadow">
+                  in
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-zinc-100">{config.mockHandle}</p>
+                    <span className="text-[10px] text-zinc-400 font-medium">• 1st</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-400">Social Media Operations & Automation</p>
+                  <p className="text-[10px] text-zinc-500">1h • 🌐</p>
+                </div>
+              </div>
+              <MoreHorizontal className="w-4 h-4 text-zinc-500 hover:text-zinc-300 cursor-pointer" />
+            </div>
+
+            {/* Post Content */}
+            <p className="text-xs text-zinc-200 whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
+              {effectiveContent || (
+                <span className="text-zinc-500 italic">Share insights, industry trends, or company announcements...</span>
+              )}
+            </p>
+
+            {/* Media Attachment */}
+            {mediaUrl && (
+              <div className="rounded-xl overflow-hidden border border-zinc-800 aspect-video bg-zinc-950 w-full shadow-md">
+                <ProgressiveImage src={mediaUrl} alt="LinkedIn attachment" debounceMs={400} />
+              </div>
+            )}
+
+            {/* Reactions Count Bar */}
+            <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-2 border-b border-zinc-800/80 pb-2">
+              <div className="flex items-center gap-1.5">
+                <div className="flex -space-x-1">
+                  <span className="w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center text-[8px]">👍</span>
+                  <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px]">👏</span>
+                  <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[8px]">💡</span>
+                </div>
+                <span className="text-zinc-300 font-medium">184</span>
+              </div>
+              <div className="flex items-center gap-3 text-zinc-400">
+                <span>32 comments</span>
+                <span>7 reposts</span>
+              </div>
+            </div>
+
+            {/* Action Buttons Bar */}
+            <div className="flex items-center justify-around pt-1 text-xs text-zinc-400">
+              <button type="button" className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-zinc-800 hover:text-[#0A66C2] transition-colors">
+                <ThumbsUp className="w-4 h-4" />
+                <span>Like</span>
+              </button>
+              <button type="button" className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-zinc-800 hover:text-zinc-200 transition-colors">
+                <MessageCircle className="w-4 h-4" />
+                <span>Comment</span>
+              </button>
+              <button type="button" className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-zinc-800 hover:text-zinc-200 transition-colors">
+                <Repeat2 className="w-4 h-4" />
+                <span>Repost</span>
+              </button>
+              <button type="button" className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-zinc-800 hover:text-zinc-200 transition-colors">
+                <Send className="w-4 h-4" />
+                <span>Send</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

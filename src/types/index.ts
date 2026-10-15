@@ -1,4 +1,4 @@
-export type PlatformId = 'x' | 'instagram' | 'tiktok' | 'facebook';
+export type PlatformId = 'x' | 'instagram' | 'tiktok' | 'facebook' | 'linkedin';
 
 export type PostStatus = 'scheduled' | 'published' | 'failed';
 

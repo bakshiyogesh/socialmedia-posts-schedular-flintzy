@@ -67,6 +67,19 @@ export const PLATFORMS: Record<PlatformId, PlatformConfig> = {
     mockHandle: 'Flintzy Official',
     placeholder: 'Share an update with your community...',
   },
+  linkedin: {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    shortName: 'LinkedIn',
+    charLimit: 3000,
+    requiresMedia: false,
+    supportedMediaTypes: ['image', 'video'],
+    brandColor: '#0A66C2',
+    badgeBg: 'bg-[#0A66C2] text-white',
+    badgeText: 'text-[#0A66C2]',
+    mockHandle: 'Flintzy Official',
+    placeholder: 'What do you want to talk about? Share industry insights...',
+  },
 };
 
-export const ALL_PLATFORMS: PlatformId[] = ['x', 'instagram', 'tiktok', 'facebook'];
+export const ALL_PLATFORMS: PlatformId[] = ['x', 'instagram', 'tiktok', 'facebook', 'linkedin'];

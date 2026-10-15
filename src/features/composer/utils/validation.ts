@@ -25,6 +25,7 @@ export function validatePost(input: PostFormInput): ValidationResult {
     instagram: { count: 0, limit: PLATFORMS.instagram.charLimit, remaining: PLATFORMS.instagram.charLimit, isOver: false },
     tiktok: { count: 0, limit: PLATFORMS.tiktok.charLimit, remaining: PLATFORMS.tiktok.charLimit, isOver: false },
     facebook: { count: 0, limit: PLATFORMS.facebook.charLimit, remaining: PLATFORMS.facebook.charLimit, isOver: false },
+    linkedin: { count: 0, limit: PLATFORMS.linkedin.charLimit, remaining: PLATFORMS.linkedin.charLimit, isOver: false },
   };
 
   // 1. Platform Selection Check

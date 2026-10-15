@@ -228,14 +228,25 @@ describe('Pre-Flight Validation & Platform Limits', () => {
     ).toBe(true);
   });
 
-  it('permits X and Facebook without media if within character limits', () => {
+  it('permits X, Facebook, and LinkedIn without media if within character limits', () => {
     const result = validatePost({
-      content: 'Text-only update for X and Facebook',
-      platforms: ['x', 'facebook'],
+      content: 'Text-only update for X, Facebook, and LinkedIn',
+      platforms: ['x', 'facebook', 'linkedin'],
       scheduledAt: new Date(Date.now() + 600000).toISOString(),
     });
     expect(result.isValid).toBe(true);
     expect(result.blockers).toHaveLength(0);
+  });
+
+  it('blocks scheduling when LinkedIn exceeds 3000 character limit', () => {
+    const longContent = 'L'.repeat(3001);
+    const result = validatePost({
+      content: longContent,
+      platforms: ['linkedin'],
+      scheduledAt: new Date(Date.now() + 600000).toISOString(),
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.blockers.some((b) => b.message.includes('exceeds character limit'))).toBe(true);
   });
 
   it('blocks scheduling if scheduled time is in the past', () => {
