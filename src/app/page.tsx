@@ -23,6 +23,7 @@ function DashboardContent() {
   const [viewMode, setViewMode] = useState<'queue' | 'calendar'>('queue');
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerPost, setComposerPost] = useState<Post | null>(null);
+  const [composerInitialDate, setComposerInitialDate] = useState<string | null>(null);
   const [reconnectPost, setReconnectPost] = useState<Post | null>(null);
   const [reschedulePost, setReschedulePost] = useState<Post | null>(null);
 
@@ -129,6 +130,7 @@ function DashboardContent() {
 
   const handleDuplicate = (post: Post) => {
     setComposerPost(post);
+    setComposerInitialDate(null);
     setIsComposerOpen(true);
   };
 
@@ -138,11 +140,19 @@ function DashboardContent() {
       ...post,
       mediaUrl: 'https://images.unsplash.com/photo-1579869847514-7c1a19d2d2ad?w=800&auto=format&fit=crop&q=80',
     });
+    setComposerInitialDate(null);
     setIsComposerOpen(true);
   };
 
   const handleOpenNew = () => {
     setComposerPost(null);
+    setComposerInitialDate(null);
+    setIsComposerOpen(true);
+  };
+
+  const handleScheduleForDate = (dateKey: string) => {
+    setComposerPost(null);
+    setComposerInitialDate(dateKey);
     setIsComposerOpen(true);
   };
 
@@ -243,6 +253,7 @@ function DashboardContent() {
           <MonthCalendarView
             posts={filteredPosts}
             onDuplicatePost={handleDuplicate}
+            onScheduleForDate={handleScheduleForDate}
           />
         ) : (
           <>
@@ -283,8 +294,10 @@ function DashboardContent() {
         onClose={() => {
           setIsComposerOpen(false);
           setComposerPost(null);
+          setComposerInitialDate(null);
         }}
         initialPost={composerPost}
+        initialDate={composerInitialDate}
       />
 
       {/* OAuth Reconnect Dialog */}

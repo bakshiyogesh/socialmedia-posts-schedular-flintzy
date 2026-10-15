@@ -23,12 +23,14 @@ interface PostComposerModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialPost?: Post | null;
+  initialDate?: string | null;
 }
 
 export function PostComposerModal({
   isOpen,
   onClose,
   initialPost,
+  initialDate,
 }: PostComposerModalProps) {
   const [content, setContent] = useState('');
   const [platforms, setPlatforms] = useState<PlatformId[]>(DEFAULT_PLATFORMS);
@@ -44,18 +46,28 @@ export function PostComposerModal({
    * The modal stays mounted while closed, so state must be reset explicitly.
    * Prefills from `source` when duplicating, otherwise returns to a blank form.
    */
-  const resetForm = useCallback((source?: Post | null) => {
+  const resetForm = useCallback((source?: Post | null, prefillDate?: string | null) => {
     setContent(source?.content ?? '');
     setPlatforms(source?.platforms ?? DEFAULT_PLATFORMS);
     setMediaUrl(source?.mediaUrl ?? '');
     setMediaLoadState('idle');
-    setScheduledAt(defaultScheduledAt());
+    
+    if (source?.scheduledAt) {
+      setScheduledAt(source.scheduledAt);
+    } else if (prefillDate) {
+      const [y, m, d] = prefillDate.split('-').map(Number);
+      const target = new Date(y, m - 1, d, 10, 0, 0);
+      setScheduledAt(target.getTime() > Date.now() ? target.toISOString() : defaultScheduledAt());
+    } else {
+      setScheduledAt(defaultScheduledAt());
+    }
+
     setOverrides(source?.platformOverrides ?? {});
     setShowOverrides(false);
     setHasDraftPrompt(false);
   }, []);
 
-  // Start every open from a clean slate (or the duplicated post),
+  // Start every open from a clean slate (or the duplicated post / initial date),
   // then offer to restore an unsent draft for brand-new posts.
   // Also clear on close so stale state never leaks into the next session
   // (unsent work is already persisted by the autosave below).
@@ -64,9 +76,9 @@ export function PostComposerModal({
       resetForm();
       return;
     }
-    resetForm(initialPost);
+    resetForm(initialPost, initialDate);
 
-    if (initialPost) return;
+    if (initialPost || initialDate) return;
     try {
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (saved) {
@@ -78,7 +90,7 @@ export function PostComposerModal({
     } catch {
       // Ignore JSON error
     }
-  }, [isOpen, initialPost, resetForm]);
+  }, [isOpen, initialPost, initialDate, resetForm]);
 
   // Lock background scroll when modal is open
   useEffect(() => {

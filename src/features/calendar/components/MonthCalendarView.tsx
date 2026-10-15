@@ -1,16 +1,21 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus } from 'lucide-react';
 import { PostCard } from '@/features/posts/components/PostCard';
 import type { Post } from '@/types';
 
 interface MonthCalendarViewProps {
   posts: Post[];
   onDuplicatePost: (post: Post) => void;
+  onScheduleForDate?: (dateKey: string) => void;
 }
 
-export function MonthCalendarView({ posts, onDuplicatePost }: MonthCalendarViewProps) {
+export function MonthCalendarView({
+  posts,
+  onDuplicatePost,
+  onScheduleForDate,
+}: MonthCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
 
@@ -142,7 +147,7 @@ export function MonthCalendarView({ posts, onDuplicatePost }: MonthCalendarViewP
                 key={cell.dateKey}
                 type="button"
                 onClick={() => setSelectedDayKey(isSelected ? null : cell.dateKey)}
-                className={`min-h-[75px] sm:min-h-[90px] p-2 text-left transition-all flex flex-col justify-between ${
+                className={`group min-h-[75px] sm:min-h-[90px] p-2 text-left transition-all flex flex-col justify-between ${
                   isSelected
                     ? 'bg-indigo-950/40 ring-2 ring-indigo-500 z-10'
                     : 'bg-zinc-950/90 hover:bg-zinc-900/80'
@@ -159,11 +164,27 @@ export function MonthCalendarView({ posts, onDuplicatePost }: MonthCalendarViewP
                     {cell.dayNumber}
                   </span>
 
-                  {dayPosts.length > 0 && (
-                    <span className="text-[10px] text-zinc-500 font-mono">
-                      {dayPosts.length}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {dayPosts.length > 0 && (
+                      <span className="text-[10px] text-zinc-500 font-mono">
+                        {dayPosts.length}
+                      </span>
+                    )}
+
+                    {onScheduleForDate && (
+                      <span
+                        role="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onScheduleForDate(cell.dateKey!);
+                        }}
+                        title={`Schedule post for ${cell.dateKey}`}
+                        className="w-5 h-5 rounded flex items-center justify-center text-zinc-500 hover:text-white hover:bg-indigo-600 transition-colors opacity-70 sm:opacity-0 group-hover:opacity-100"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Post Count Indicator Dots */}
@@ -196,14 +217,27 @@ export function MonthCalendarView({ posts, onDuplicatePost }: MonthCalendarViewP
       {/* Selected Day Posts Drawer/List */}
       {selectedDayKey && (
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-indigo-400" />
-              <span>Posts for {selectedDayKey}</span>
-            </h3>
-            <span className="text-xs text-zinc-400">
-              {selectedPosts.length} {selectedPosts.length === 1 ? 'post' : 'posts'}
-            </span>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-indigo-400" />
+                <span>Posts for {selectedDayKey}</span>
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                {selectedPosts.length} {selectedPosts.length === 1 ? 'post' : 'posts'}
+              </p>
+            </div>
+
+            {onScheduleForDate && (
+              <button
+                type="button"
+                onClick={() => onScheduleForDate(selectedDayKey)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Schedule for this Day</span>
+              </button>
+            )}
           </div>
 
           {selectedPosts.length === 0 ? (
