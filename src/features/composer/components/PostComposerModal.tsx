@@ -12,8 +12,9 @@ import { validatePost, type PostFormInput } from '../utils/validation';
 import { useCreatePostMutation, useUpdatePostMutation } from '@/features/posts/hooks/usePosts';
 import { PLATFORMS } from '@/config/platforms';
 import type { PlatformId, Post, DraftPost } from '@/types';
-import { toast } from 'sonner';
 import type { ImageLoadState } from '@/components/shared/ProgressiveImage';
+import { normalizeMediaUrl } from '@/lib/media';
+import { toast } from 'sonner';
 
 const DRAFT_STORAGE_KEY = 'flintzy_composer_draft';
 const DEFAULT_PLATFORMS: PlatformId[] = ['x', 'instagram'];
@@ -122,8 +123,11 @@ export function PostComposerModal({
   // Autosave draft to localStorage (only while open, and only when there is real work to save)
   useEffect(() => {
     if (isOpen && !initialPost && (content.trim() || mediaUrl.trim())) {
-      // Avoid saving huge local base64 files to localStorage to prevent quota exhaustion
-      const safeMediaUrl = mediaUrl.startsWith('data:') && mediaUrl.length > 200000 ? '' : mediaUrl;
+      // Avoid saving huge local base64 files or session-only blob URLs to localStorage to prevent quota exhaustion
+      const safeMediaUrl =
+        (mediaUrl.startsWith('data:') && mediaUrl.length > 200000) || mediaUrl.startsWith('blob:')
+          ? ''
+          : mediaUrl;
       const draft: DraftPost = {
         content,
         platforms,
@@ -174,11 +178,7 @@ export function PostComposerModal({
     () => ({
       content,
       platforms,
-      mediaUrl: mediaUrl.trim()
-        ? mediaUrl.trim().startsWith('http')
-          ? mediaUrl.trim()
-          : `https://${mediaUrl.trim()}`
-        : undefined,
+      mediaUrl: mediaUrl.trim() ? normalizeMediaUrl(mediaUrl) : undefined,
       scheduledAt,
       platformOverrides: overrides,
     }),

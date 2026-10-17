@@ -1,5 +1,6 @@
 import { PLATFORMS } from '@/config/platforms';
 import { isFutureDate } from '@/lib/time';
+import { normalizeMediaUrl } from '@/lib/media';
 import type { PlatformId, PreFlightIssue } from '@/types';
 
 export interface PostFormInput {
@@ -88,12 +89,12 @@ export function validatePost(input: PostFormInput): ValidationResult {
 
   // 4. Media URL format validation (if provided)
   if (input.mediaUrl && input.mediaUrl.trim().length > 0) {
-    const trimmed = input.mediaUrl.trim();
-    const isLocalAttachment = trimmed.startsWith('data:') || trimmed.startsWith('blob:');
+    const normalized = normalizeMediaUrl(input.mediaUrl);
+    const isLocalAttachment = normalized.startsWith('data:') || normalized.startsWith('blob:');
 
     if (!isLocalAttachment) {
       try {
-        const url = new URL(trimmed);
+        const url = new URL(normalized);
         if (!['http:', 'https:'].includes(url.protocol)) {
           blockers.push({
             type: 'error',

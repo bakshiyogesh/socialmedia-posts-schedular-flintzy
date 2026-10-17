@@ -17,7 +17,8 @@ export function isVideoMedia(src: string): boolean {
   if (!src) return false;
   const s = src.toLowerCase();
   if (s.startsWith('data:video/')) return true;
-  return /\.(mp4|webm|ogg|mov|m4v)($|\?)/i.test(s);
+  if (s.includes('#video') || s.includes('type=video')) return true;
+  return /\.(mp4|webm|ogg|mov|m4v)($|\?|#)/i.test(s);
 }
 
 /**

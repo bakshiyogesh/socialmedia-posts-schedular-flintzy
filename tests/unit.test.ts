@@ -288,6 +288,27 @@ describe('Pre-Flight Validation & Platform Limits', () => {
     expect(result.isValid).toBe(true);
     expect(result.blockers).toHaveLength(0);
   });
+
+  it('permits local blob: URLs and naked domain URLs without invalid URL format error', () => {
+    const blobUrl = 'blob:http://localhost:3000/d73b064f-c020-4a8f-b98a-7b3b44b6c310#video';
+    const result = validatePost({
+      content: 'Instagram video post',
+      platforms: ['instagram'],
+      mediaUrl: blobUrl,
+      scheduledAt: new Date(Date.now() + 600000).toISOString(),
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.blockers).toHaveLength(0);
+
+    const nakedDomainResult = validatePost({
+      content: 'Instagram post with domain URL',
+      platforms: ['instagram'],
+      mediaUrl: 'images.unsplash.com/photo-1522071820081-009f0129c71c',
+      scheduledAt: new Date(Date.now() + 600000).toISOString(),
+    });
+    expect(nakedDomainResult.isValid).toBe(true);
+    expect(nakedDomainResult.blockers).toHaveLength(0);
+  });
 });
 
 describe('Media Utilities & Progressive Loader', () => {
@@ -296,10 +317,13 @@ describe('Media Utilities & Progressive Loader', () => {
     expect(normalizeMediaUrl('https://example.com/pic.png')).toBe('https://example.com/pic.png');
     expect(normalizeMediaUrl('data:image/png;base64,iVBORw0KGgo')).toBe('data:image/png;base64,iVBORw0KGgo');
     expect(normalizeMediaUrl('blob:http://localhost:3000/12345')).toBe('blob:http://localhost:3000/12345');
+    expect(normalizeMediaUrl('blob:http://localhost:3000/12345#video')).toBe('blob:http://localhost:3000/12345#video');
   });
 
-  it('detects video assets correctly for data URLs and file extensions', () => {
+  it('detects video assets correctly for data URLs, blob fragments, and file extensions', () => {
     expect(isVideoMedia('data:video/mp4;base64,AAAA')).toBe(true);
+    expect(isVideoMedia('blob:http://localhost:3000/12345#video')).toBe(true);
+    expect(isVideoMedia('blob:http://localhost:3000/12345')).toBe(false);
     expect(isVideoMedia('https://example.com/clip.mp4')).toBe(true);
     expect(isVideoMedia('https://example.com/clip.mov?download=true')).toBe(true);
     expect(isVideoMedia('https://example.com/photo.jpg')).toBe(false);

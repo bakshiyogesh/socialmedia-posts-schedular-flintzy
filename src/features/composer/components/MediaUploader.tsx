@@ -59,20 +59,19 @@ export function MediaUploader({
     setUploadedFileType(isVideo ? 'video' : 'image');
     onStateChange('loading');
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (result) {
-        onMediaChange(result);
-        onStateChange('loaded');
-        toast.success(`Attached ${file.name}`);
-      }
-    };
-    reader.onerror = () => {
+    try {
+      // Create local object URL (Blob URL) for instant zero-copy preview.
+      // Append #video fragment for videos so format detection reliably classifies it.
+      const rawUrl = URL.createObjectURL(file);
+      const objectUrl = isVideo ? `${rawUrl}#video` : rawUrl;
+
+      onMediaChange(objectUrl);
+      onStateChange('loaded');
+      toast.success(`Attached ${file.name}`);
+    } catch {
       onStateChange('error');
       toast.error('Failed to read local file.');
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -203,7 +202,7 @@ export function MediaUploader({
             </div>
             <input
               type="url"
-              value={mediaUrl.startsWith('data:') ? '' : mediaUrl}
+              value={mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:') ? '' : mediaUrl}
               onChange={(e) => {
                 onMediaChange(e.target.value);
                 setUploadedFileName(null);
@@ -212,7 +211,7 @@ export function MediaUploader({
               placeholder="https://images.unsplash.com/... or paste image link"
               className="w-full pl-9 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
             />
-            {mediaUrl && !mediaUrl.startsWith('data:') && (
+            {mediaUrl && !mediaUrl.startsWith('data:') && !mediaUrl.startsWith('blob:') && (
               <button
                 type="button"
                 onClick={handleClear}
