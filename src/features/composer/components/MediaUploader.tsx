@@ -4,12 +4,17 @@ import React, { useState, useRef } from 'react';
 import { UploadCloud, Link as LinkIcon, Image as ImageIcon, X, Check, FileText, Video as VideoIcon } from 'lucide-react';
 import { ProgressiveImage } from '@/components/shared/ProgressiveImage';
 import { toast } from 'sonner';
+import { saveDraftMedia, clearDraftMedia } from '@/lib/storage/draftMediaDb';
 
 interface MediaUploaderProps {
   mediaUrl: string;
   onMediaChange: (url: string) => void;
   mediaLoadState: 'idle' | 'loading' | 'loaded' | 'error';
   onStateChange: (state: 'idle' | 'loading' | 'loaded' | 'error') => void;
+  fileName?: string | null;
+  fileSize?: string | null;
+  fileType?: 'image' | 'video' | null;
+  onFileInfoChange?: (info: { fileName: string | null; fileSize: string | null; fileType: 'image' | 'video' | null }) => void;
 }
 
 const SAMPLE_PRESETS = [
@@ -23,15 +28,23 @@ export function MediaUploader({
   onMediaChange,
   mediaLoadState,
   onStateChange,
+  fileName,
+  fileSize,
+  fileType,
+  onFileInfoChange,
 }: MediaUploaderProps) {
   const [activeMode, setActiveMode] = useState<'upload' | 'url'>(
     mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:') ? 'upload' : 'url'
   );
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
-  const [uploadedFileSize, setUploadedFileSize] = useState<string | null>(null);
-  const [uploadedFileType, setUploadedFileType] = useState<'image' | 'video' | null>(null);
+  const [localFileName, setLocalFileName] = useState<string | null>(null);
+  const [localFileSize, setLocalFileSize] = useState<string | null>(null);
+  const [localFileType, setLocalFileType] = useState<'image' | 'video' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadedFileName = fileName !== undefined ? fileName : localFileName;
+  const uploadedFileSize = fileSize !== undefined ? fileSize : localFileSize;
+  const uploadedFileType = fileType !== undefined ? fileType : localFileType;
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -54,9 +67,15 @@ export function MediaUploader({
       return;
     }
 
-    setUploadedFileName(file.name);
-    setUploadedFileSize(formatFileSize(file.size));
-    setUploadedFileType(isVideo ? 'video' : 'image');
+    const formattedSize = formatFileSize(file.size);
+    setLocalFileName(file.name);
+    setLocalFileSize(formattedSize);
+    setLocalFileType(isVideo ? 'video' : 'image');
+    onFileInfoChange?.({
+      fileName: file.name,
+      fileSize: formattedSize,
+      fileType: isVideo ? 'video' : 'image',
+    });
     onStateChange('loading');
 
     try {
@@ -64,6 +83,15 @@ export function MediaUploader({
       // Append #video fragment for videos so format detection reliably classifies it.
       const rawUrl = URL.createObjectURL(file);
       const objectUrl = isVideo ? `${rawUrl}#video` : rawUrl;
+
+      // Persist raw binary File in IndexedDB so it survives hard browser refreshes
+      saveDraftMedia(file, {
+        fileName: file.name,
+        fileSize: formattedSize,
+        fileType: isVideo ? 'video' : 'image',
+      }).catch(() => {
+        // IndexedDB unavailable or private mode, silently continue
+      });
 
       onMediaChange(objectUrl);
       onStateChange('loaded');
@@ -105,9 +133,11 @@ export function MediaUploader({
 
   const handleClear = () => {
     onMediaChange('');
-    setUploadedFileName(null);
-    setUploadedFileSize(null);
-    setUploadedFileType(null);
+    setLocalFileName(null);
+    setLocalFileSize(null);
+    setLocalFileType(null);
+    onFileInfoChange?.({ fileName: null, fileSize: null, fileType: null });
+    clearDraftMedia().catch(() => {});
     onStateChange('idle');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -205,8 +235,11 @@ export function MediaUploader({
               value={mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:') ? '' : mediaUrl}
               onChange={(e) => {
                 onMediaChange(e.target.value);
-                setUploadedFileName(null);
-                setUploadedFileSize(null);
+                setLocalFileName(null);
+                setLocalFileSize(null);
+                setLocalFileType(null);
+                onFileInfoChange?.({ fileName: null, fileSize: null, fileType: null });
+                clearDraftMedia().catch(() => {});
               }}
               placeholder="https://images.unsplash.com/... or paste image link"
               className="w-full pl-9 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
@@ -233,8 +266,11 @@ export function MediaUploader({
                   type="button"
                   onClick={() => {
                     onMediaChange(preset.url);
-                    setUploadedFileName(null);
-                    setUploadedFileSize(null);
+                    setLocalFileName(null);
+                    setLocalFileSize(null);
+                    setLocalFileType(null);
+                    onFileInfoChange?.({ fileName: null, fileSize: null, fileType: null });
+                    clearDraftMedia().catch(() => {});
                   }}
                   className="px-2 py-0.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors"
                 >

@@ -15,6 +15,7 @@ import type { PlatformId, Post, DraftPost } from '@/types';
 import type { ImageLoadState } from '@/components/shared/ProgressiveImage';
 import { normalizeMediaUrl } from '@/lib/media';
 import { toast } from 'sonner';
+import { getDraftMedia, clearDraftMedia } from '@/lib/storage/draftMediaDb';
 
 const DRAFT_STORAGE_KEY = 'flintzy_composer_draft';
 const DEFAULT_PLATFORMS: PlatformId[] = ['x', 'instagram'];
@@ -39,6 +40,11 @@ export function PostComposerModal({
   const [platforms, setPlatforms] = useState<PlatformId[]>(DEFAULT_PLATFORMS);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaLoadState, setMediaLoadState] = useState<ImageLoadState>('idle');
+  const [mediaFileInfo, setMediaFileInfo] = useState<{
+    fileName: string | null;
+    fileSize: string | null;
+    fileType: 'image' | 'video' | null;
+  }>({ fileName: null, fileSize: null, fileType: null });
   // Default +2 hours in future
   const [scheduledAt, setScheduledAt] = useState<string>(defaultScheduledAt);
   const [overrides, setOverrides] = useState<Partial<Record<PlatformId, { content?: string }>>>({});
@@ -54,6 +60,7 @@ export function PostComposerModal({
     setPlatforms(source?.platforms ?? DEFAULT_PLATFORMS);
     setMediaUrl(source?.mediaUrl ?? '');
     setMediaLoadState('idle');
+    setMediaFileInfo({ fileName: null, fileSize: null, fileType: null });
     
     if (source?.scheduledAt) {
       setScheduledAt(source.scheduledAt);
@@ -98,12 +105,23 @@ export function PostComposerModal({
     if (initialPost || initialDate) return;
     try {
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      let hasLocalDraft = false;
       if (saved) {
         const draft: DraftPost = JSON.parse(saved);
         if (draft.content || draft.mediaUrl) {
-          setHasDraftPrompt(true);
+          hasLocalDraft = true;
         }
       }
+      // Check both localStorage text draft and IndexedDB binary media draft
+      getDraftMedia()
+        .then((mediaRecord) => {
+          if (hasLocalDraft || Boolean(mediaRecord)) {
+            setHasDraftPrompt(true);
+          }
+        })
+        .catch(() => {
+          if (hasLocalDraft) setHasDraftPrompt(true);
+        });
     } catch {
       // Ignore JSON error
     }
@@ -119,6 +137,23 @@ export function PostComposerModal({
       };
     }
   }, [isOpen]);
+
+  // Prevent accidental page reloads or tab closures when unsaved work is in progress
+  useEffect(() => {
+    if (!isOpen) return;
+    const hasUnsavedWork = Boolean(content.trim() || mediaUrl.trim());
+    if (!hasUnsavedWork) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ''; // Standard trigger for modern browsers
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isOpen, content, mediaUrl]);
 
   // Autosave draft to localStorage (only while open, and only when there is real work to save)
   useEffect(() => {
@@ -144,7 +179,7 @@ export function PostComposerModal({
     }
   }, [isOpen, content, platforms, mediaUrl, scheduledAt, overrides, initialPost]);
 
-  const restoreDraft = () => {
+  const restoreDraft = async () => {
     try {
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (saved) {
@@ -154,8 +189,23 @@ export function PostComposerModal({
         setMediaUrl(draft.mediaUrl || '');
         if (draft.scheduledAt) setScheduledAt(draft.scheduledAt);
         if (draft.platformOverrides) setOverrides(draft.platformOverrides);
-        toast.success('Draft restored');
       }
+
+      // Check if an offline binary media attachment is saved in IndexedDB
+      const mediaRecord = await getDraftMedia().catch(() => null);
+      if (mediaRecord) {
+        const rawUrl = URL.createObjectURL(mediaRecord.blob);
+        const objectUrl = mediaRecord.fileType === 'video' ? `${rawUrl}#video` : rawUrl;
+        setMediaUrl(objectUrl);
+        setMediaFileInfo({
+          fileName: mediaRecord.fileName,
+          fileSize: mediaRecord.fileSize,
+          fileType: mediaRecord.fileType,
+        });
+        setMediaLoadState('loaded');
+      }
+
+      toast.success('Draft restored');
     } catch {
       toast.error('Failed to restore draft');
     }
@@ -164,6 +214,8 @@ export function PostComposerModal({
 
   const discardDraft = () => {
     localStorage.removeItem(DRAFT_STORAGE_KEY);
+    clearDraftMedia().catch(() => {});
+    setMediaFileInfo({ fileName: null, fileSize: null, fileType: null });
     setHasDraftPrompt(false);
   };
 
@@ -193,6 +245,7 @@ export function PostComposerModal({
   const createMutation = useCreatePostMutation(() => {
     // Post is persisted: drop the draft and clear the form so the next open is blank.
     localStorage.removeItem(DRAFT_STORAGE_KEY);
+    clearDraftMedia().catch(() => {});
     resetForm();
     onClose();
   });
@@ -371,6 +424,10 @@ export function PostComposerModal({
               onMediaChange={setMediaUrl}
               mediaLoadState={mediaLoadState}
               onStateChange={setMediaLoadState}
+              fileName={mediaFileInfo.fileName}
+              fileSize={mediaFileInfo.fileSize}
+              fileType={mediaFileInfo.fileType}
+              onFileInfoChange={setMediaFileInfo}
             />
 
             {/* Date-Time Picker with Local / UTC logic */}

@@ -365,3 +365,23 @@ describe('Social Media Timestamp Formatting', () => {
     expect(formatSocialTimestamp(twoDays, base).ago).toBe('2d ago');
   });
 });
+
+describe('IndexedDB Draft Media Recovery', () => {
+  it('safely handles non-browser environments and avoids crashing without window.indexedDB', async () => {
+    const { getDraftMedia, saveDraftMedia, clearDraftMedia } = await import('@/lib/storage/draftMediaDb');
+    const result = await getDraftMedia();
+    expect(result).toBeNull();
+
+    const mockBlob = new Blob(['sample-data'], { type: 'image/png' });
+    await expect(
+      saveDraftMedia(mockBlob, {
+        fileName: 'hero.png',
+        fileSize: '1.2 MB',
+        fileType: 'image',
+      })
+    ).resolves.toBeUndefined();
+
+    await expect(clearDraftMedia()).resolves.toBeUndefined();
+  });
+});
+
