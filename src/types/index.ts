@@ -38,6 +38,7 @@ export interface FilterState {
   platforms: PlatformId[];
   status: PostStatus | 'all';
   q: string;
+  date?: string;
 }
 
 export interface StatusCounts {

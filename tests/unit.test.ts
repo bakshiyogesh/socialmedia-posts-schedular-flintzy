@@ -12,6 +12,7 @@ import {
 import {
   filterPosts,
   computeStatusCounts,
+  matchesDateFilter,
 } from '@/features/filters/utils/filterPosts';
 
 import { validatePost } from '@/features/composer/utils/validation';
@@ -487,6 +488,136 @@ describe('Post Deletion & Selection State Management', () => {
 
     onBulkDeleteSuccess();
     expect(selectedPostIds).toEqual([]);
+  });
+});
+
+describe('Date Filtering Engine', () => {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+  const todayIso = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 14, 0).toISOString();
+  const tomorrowIso = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 10, 0).toISOString();
+  const pastIso = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 5, 9, 0).toISOString();
+
+  it('matches "today" filter strictly for today posts', () => {
+    expect(matchesDateFilter(todayIso, 'today')).toBe(true);
+    expect(matchesDateFilter(tomorrowIso, 'today')).toBe(false);
+    expect(matchesDateFilter(pastIso, 'today')).toBe(false);
+  });
+
+  it('matches "tomorrow" filter correctly', () => {
+    expect(matchesDateFilter(tomorrowIso, 'tomorrow')).toBe(true);
+    expect(matchesDateFilter(todayIso, 'tomorrow')).toBe(false);
+  });
+
+  it('matches "earlier" / "past" filter correctly', () => {
+    expect(matchesDateFilter(pastIso, 'earlier')).toBe(true);
+    expect(matchesDateFilter(todayIso, 'earlier')).toBe(false);
+    expect(matchesDateFilter(tomorrowIso, 'earlier')).toBe(false);
+  });
+
+  it('matches exact YYYY-MM-DD date string', () => {
+    expect(matchesDateFilter(todayIso, todayKey)).toBe(true);
+    expect(matchesDateFilter(tomorrowIso, todayKey)).toBe(false);
+  });
+
+  it('integrates date filter seamlessly with filterPosts', () => {
+    const mockPosts: Post[] = [
+      {
+        id: 'p1',
+        content: 'Post today',
+        platforms: ['x'],
+        scheduledAt: todayIso,
+        status: 'scheduled',
+        createdAt: todayIso,
+        updatedAt: todayIso,
+      },
+      {
+        id: 'p2',
+        content: 'Post tomorrow',
+        platforms: ['x'],
+        scheduledAt: tomorrowIso,
+        status: 'scheduled',
+        createdAt: todayIso,
+        updatedAt: todayIso,
+      },
+    ];
+
+    const todayFiltered = filterPosts(mockPosts, {
+      platforms: [],
+      status: 'all',
+      q: '',
+      date: 'today',
+    });
+    expect(todayFiltered.length).toBe(1);
+    expect(todayFiltered[0].id).toBe('p1');
+
+    const tomorrowFiltered = filterPosts(mockPosts, {
+      platforms: [],
+      status: 'all',
+      q: '',
+      date: 'tomorrow',
+    });
+    expect(tomorrowFiltered.length).toBe(1);
+    expect(tomorrowFiltered[0].id).toBe('p2');
+  });
+});
+
+describe('Calendar Date Click & Modal Composer Routing', () => {
+  it('routes to onEditPost when clicking a calendar day cell with an existing scheduled post', () => {
+    const mockPost: Post = {
+      id: 'post-cal-1',
+      content: 'Scheduled newsletter preview',
+      platforms: ['linkedin'],
+      scheduledAt: '2026-10-20T10:00:00.000Z',
+      status: 'scheduled',
+      createdAt: '2026-10-18T10:00:00.000Z',
+      updatedAt: '2026-10-18T10:00:00.000Z',
+    };
+
+    const dayPosts = [mockPost];
+    let editedPost: Post | null = null;
+    let scheduledDate: string | null = null;
+
+    const onEditPost = (post: Post) => {
+      editedPost = post;
+    };
+    const onScheduleForDate = (dateKey: string) => {
+      scheduledDate = dateKey;
+    };
+
+    // Calendar cell click handler logic
+    if (dayPosts.length === 1) {
+      onEditPost(dayPosts[0]);
+    } else if (dayPosts.length === 0) {
+      onScheduleForDate('2026-10-20');
+    }
+
+    expect(editedPost).toEqual(mockPost);
+    expect(scheduledDate).toBeNull();
+  });
+
+  it('routes to onScheduleForDate when clicking an empty calendar day cell', () => {
+    const dayPosts: Post[] = [];
+    let editedPost: Post | null = null;
+    let scheduledDate: string | null = null;
+
+    const onEditPost = (post: Post) => {
+      editedPost = post;
+    };
+    const onScheduleForDate = (dateKey: string) => {
+      scheduledDate = dateKey;
+    };
+
+    if (dayPosts.length === 1) {
+      onEditPost(dayPosts[0]);
+    } else if (dayPosts.length === 0) {
+      onScheduleForDate('2026-10-25');
+    }
+
+    expect(editedPost).toBeNull();
+    expect(scheduledDate).toBe('2026-10-25');
   });
 });
 

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 export interface CalendarProps {
   selected?: Date;
   onSelect?: (date: Date) => void;
-  disabledBefore?: Date;
+  disabledBefore?: Date | null;
   className?: string;
 }
 
@@ -106,7 +106,7 @@ export function Calendar({
 
           const isSelected = selected && isSameDay(date, selected);
           const isDateToday = isToday(date);
-          const isDisabled = disabledBefore && isBefore(date, disabledBefore);
+          const isDisabled = Boolean(disabledBefore && isBefore(date, disabledBefore));
 
           return (
             <button

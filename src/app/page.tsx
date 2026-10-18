@@ -63,13 +63,18 @@ function DashboardContent() {
     return searchParams.get('q') || '';
   }, [searchParams]);
 
+  const activeDate = useMemo<string>(() => {
+    return searchParams.get('date') || 'all';
+  }, [searchParams]);
+
   const filters: FilterState = useMemo(
     () => ({
       platforms: activePlatforms,
       status: activeStatus,
       q: searchQuery,
+      date: activeDate,
     }),
-    [activePlatforms, activeStatus, searchQuery]
+    [activePlatforms, activeStatus, searchQuery, activeDate]
   );
 
   const updateFiltersInUrl = useCallback(
@@ -100,6 +105,14 @@ function DashboardContent() {
         }
       }
 
+      if (newFilters.date !== undefined) {
+        if (newFilters.date && newFilters.date !== 'all') {
+          params.set('date', newFilters.date.trim());
+        } else {
+          params.delete('date');
+        }
+      }
+
       const queryString = params.toString();
       router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
         scroll: false,
@@ -125,7 +138,10 @@ function DashboardContent() {
   );
 
   const hasActiveFilters =
-    filters.platforms.length > 0 || filters.status !== 'all' || filters.q !== '';
+    filters.platforms.length > 0 ||
+    filters.status !== 'all' ||
+    filters.q !== '' ||
+    (Boolean(filters.date) && filters.date !== 'all');
 
   // 5. Global 'C' shortcut to open composer
   useEffect(() => {
