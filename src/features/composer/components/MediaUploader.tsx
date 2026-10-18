@@ -36,15 +36,26 @@ export function MediaUploader({
   const [activeMode, setActiveMode] = useState<'upload' | 'url'>(
     mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:') ? 'upload' : 'url'
   );
+
+  // Synchronize active mode when editing an existing post or loading draft
+  React.useEffect(() => {
+    if (mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:')) {
+      setActiveMode('upload');
+    } else if (mediaUrl) {
+      setActiveMode('url');
+    }
+  }, [mediaUrl]);
   const [isDragging, setIsDragging] = useState(false);
-  const [localFileName, setLocalFileName] = useState<string | null>(null);
-  const [localFileSize, setLocalFileSize] = useState<string | null>(null);
-  const [localFileType, setLocalFileType] = useState<'image' | 'video' | null>(null);
+  const [localFileInfo, setLocalFileInfo] = useState<{
+    fileName: string;
+    fileSize: string;
+    fileType: 'image' | 'video';
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const uploadedFileName = fileName !== undefined ? fileName : localFileName;
-  const uploadedFileSize = fileSize !== undefined ? fileSize : localFileSize;
-  const uploadedFileType = fileType !== undefined ? fileType : localFileType;
+  const uploadedFileName = fileName !== undefined ? fileName : localFileInfo?.fileName ?? null;
+  const uploadedFileSize = fileSize !== undefined ? fileSize : localFileInfo?.fileSize ?? null;
+  const uploadedFileType = fileType !== undefined ? fileType : localFileInfo?.fileType ?? null;
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -68,14 +79,13 @@ export function MediaUploader({
     }
 
     const formattedSize = formatFileSize(file.size);
-    setLocalFileName(file.name);
-    setLocalFileSize(formattedSize);
-    setLocalFileType(isVideo ? 'video' : 'image');
-    onFileInfoChange?.({
+    const info = {
       fileName: file.name,
       fileSize: formattedSize,
-      fileType: isVideo ? 'video' : 'image',
-    });
+      fileType: isVideo ? ('video' as const) : ('image' as const),
+    };
+    setLocalFileInfo(info);
+    onFileInfoChange?.(info);
     onStateChange('loading');
 
     try {
@@ -133,9 +143,7 @@ export function MediaUploader({
 
   const handleClear = () => {
     onMediaChange('');
-    setLocalFileName(null);
-    setLocalFileSize(null);
-    setLocalFileType(null);
+    setLocalFileInfo(null);
     onFileInfoChange?.({ fileName: null, fileSize: null, fileType: null });
     clearDraftMedia().catch(() => {});
     onStateChange('idle');
@@ -235,9 +243,7 @@ export function MediaUploader({
               value={mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:') ? '' : mediaUrl}
               onChange={(e) => {
                 onMediaChange(e.target.value);
-                setLocalFileName(null);
-                setLocalFileSize(null);
-                setLocalFileType(null);
+                setLocalFileInfo(null);
                 onFileInfoChange?.({ fileName: null, fileSize: null, fileType: null });
                 clearDraftMedia().catch(() => {});
               }}
@@ -266,9 +272,7 @@ export function MediaUploader({
                   type="button"
                   onClick={() => {
                     onMediaChange(preset.url);
-                    setLocalFileName(null);
-                    setLocalFileSize(null);
-                    setLocalFileType(null);
+                    setLocalFileInfo(null);
                     onFileInfoChange?.({ fileName: null, fileSize: null, fileType: null });
                     clearDraftMedia().catch(() => {});
                   }}

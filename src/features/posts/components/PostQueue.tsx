@@ -23,6 +23,7 @@ interface PostQueueProps {
   onReschedulePost?: (post: Post) => void;
   onReconnectAccount?: (post: Post) => void;
   onFixDimensions?: (post: Post) => void;
+  onDeletePost?: (post: Post) => void;
 }
 
 export function PostQueue({
@@ -40,6 +41,7 @@ export function PostQueue({
   onReschedulePost,
   onReconnectAccount,
   onFixDimensions,
+  onDeletePost,
 }: PostQueueProps) {
   if (isLoading) {
     return <PostQueueSkeleton />;
@@ -94,6 +96,7 @@ export function PostQueue({
           onReschedule={onReschedulePost}
           onReconnect={onReconnectAccount}
           onFixDimensions={onFixDimensions}
+          onDelete={onDeletePost}
         />
       ))}
     </div>

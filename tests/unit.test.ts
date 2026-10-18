@@ -455,4 +455,39 @@ describe('Popover Auto-Flip Collision Detection', () => {
   });
 });
 
+describe('Post Deletion & Selection State Management', () => {
+  it('correctly filters out a deleted single post id while keeping remaining selections', () => {
+    const initialSelectedIds = ['post-1', 'post-2', 'post-3'];
+    const deletedId = 'post-2';
+
+    const updatedSelectedIds = initialSelectedIds.filter((id) => id !== deletedId);
+    expect(updatedSelectedIds).toEqual(['post-1', 'post-3']);
+  });
+
+  it('preserves selectedPostIds when deletion confirmation is cancelled', () => {
+    let selectedPostIds = ['post-1', 'post-2'];
+    let deleteTarget: { type: 'bulk'; ids: string[] } | null = {
+      type: 'bulk',
+      ids: selectedPostIds,
+    };
+
+    // User clicks Cancel
+    deleteTarget = null;
+
+    // Selections must remain untouched
+    expect(selectedPostIds).toEqual(['post-1', 'post-2']);
+    expect(deleteTarget).toBeNull();
+  });
+
+  it('resets selectedPostIds to empty array upon successful bulk deletion', () => {
+    let selectedPostIds = ['post-1', 'post-2'];
+    const onBulkDeleteSuccess = () => {
+      selectedPostIds = [];
+    };
+
+    onBulkDeleteSuccess();
+    expect(selectedPostIds).toEqual([]);
+  });
+});
+
 

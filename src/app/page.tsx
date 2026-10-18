@@ -3,7 +3,11 @@
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Plus, Layers, Calendar } from 'lucide-react';
-import { usePostsQuery } from '@/features/posts/hooks/usePosts';
+import {
+  usePostsQuery,
+  useBulkDeleteMutation,
+  useDeletePostMutation,
+} from '@/features/posts/hooks/usePosts';
 import { StatusSummaryStrip } from '@/features/posts/components/StatusSummaryStrip';
 import { BulkRetryBanner } from '@/features/posts/components/BulkRetryBanner';
 import { FilterBar } from '@/features/filters/components/FilterBar';
@@ -12,8 +16,8 @@ import { MonthCalendarView } from '@/features/calendar/components/MonthCalendarV
 import { PostComposerModal } from '@/features/composer/components/PostComposerModal';
 import { OAuthReconnectModal } from '@/features/posts/components/OAuthReconnectModal';
 import { RescheduleModal } from '@/features/posts/components/RescheduleModal';
+import { DeleteConfirmModal } from '@/features/posts/components/DeleteConfirmModal';
 import { BulkActionsFloatingBar } from '@/features/posts/components/BulkActionsFloatingBar';
-import { useBulkDeleteMutation } from '@/features/posts/hooks/usePosts';
 import { filterPosts, computeStatusCounts } from '@/features/filters/utils/filterPosts';
 import type { FilterState, PlatformId, Post, PostStatus } from '@/types';
 
@@ -31,8 +35,14 @@ function DashboardContent() {
   const [reschedulePost, setReschedulePost] = useState<Post | null>(null);
   const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
   const [bulkRescheduleIds, setBulkRescheduleIds] = useState<string[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: 'single' | 'bulk';
+    ids: string[];
+    post?: Post;
+  } | null>(null);
 
   const bulkDeleteMutation = useBulkDeleteMutation();
+  const singleDeleteMutation = useDeletePostMutation();
 
   // 1. Synchronize Filter State with URL Query Parameters
   const activePlatforms = useMemo<PlatformId[]>(() => {
@@ -180,13 +190,45 @@ function DashboardContent() {
     );
   };
 
+  const handleDeletePost = (post: Post) => {
+    setDeleteTarget({
+      type: 'single',
+      ids: [post.id],
+      post,
+    });
+  };
+
   const handleBulkDelete = () => {
     if (selectedPostIds.length === 0) return;
-    bulkDeleteMutation.mutate(selectedPostIds, {
-      onSuccess: () => {
-        setSelectedPostIds([]);
-      },
+    setDeleteTarget({
+      type: 'bulk',
+      ids: selectedPostIds,
     });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === 'bulk') {
+      bulkDeleteMutation.mutate(deleteTarget.ids, {
+        onSuccess: () => {
+          setSelectedPostIds([]);
+        },
+        onSettled: () => {
+          setDeleteTarget(null);
+        },
+      });
+    } else {
+      const singleId = deleteTarget.ids[0];
+      singleDeleteMutation.mutate(singleId, {
+        onSuccess: () => {
+          setSelectedPostIds((prev) => prev.filter((id) => id !== singleId));
+        },
+        onSettled: () => {
+          setDeleteTarget(null);
+        },
+      });
+    }
   };
 
   return (
@@ -287,6 +329,9 @@ function DashboardContent() {
             posts={filteredPosts}
             onDuplicatePost={handleDuplicate}
             onScheduleForDate={handleScheduleForDate}
+            onEditPost={handleEdit}
+            onReschedulePost={(post) => setReschedulePost(post)}
+            onDeletePost={handleDeletePost}
           />
         ) : (
           <>
@@ -319,6 +364,7 @@ function DashboardContent() {
               onReschedulePost={(post) => setReschedulePost(post)}
               onReconnectAccount={(post) => setReconnectPost(post)}
               onFixDimensions={handleFixDimensions}
+              onDeletePost={handleDeletePost}
             />
           </>
         )}
@@ -330,7 +376,7 @@ function DashboardContent() {
         onReschedule={() => setBulkRescheduleIds(selectedPostIds)}
         onDelete={handleBulkDelete}
         onClear={() => setSelectedPostIds([])}
-        isDeleting={bulkDeleteMutation.isPending}
+        isDeleting={bulkDeleteMutation.isPending || singleDeleteMutation.isPending}
       />
 
       {/* Post Composer Modal */}
@@ -360,8 +406,20 @@ function DashboardContent() {
         onClose={() => {
           setReschedulePost(null);
           setBulkRescheduleIds([]);
-          if (bulkRescheduleIds.length > 0) setSelectedPostIds([]);
         }}
+        onSuccess={() => {
+          setSelectedPostIds([]);
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmModal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={singleDeleteMutation.isPending || bulkDeleteMutation.isPending}
+        count={deleteTarget?.ids.length ?? 1}
+        postExcerpt={deleteTarget?.post?.content}
       />
     </div>
   );

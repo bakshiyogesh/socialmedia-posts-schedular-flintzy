@@ -13,9 +13,10 @@ interface RescheduleModalProps {
   post: Post | null;
   postIds?: string[];
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function RescheduleModal({ post, postIds = [], onClose }: RescheduleModalProps) {
+export function RescheduleModal({ post, postIds = [], onClose, onSuccess }: RescheduleModalProps) {
   const queryClient = useQueryClient();
   const bulkRescheduleMutation = useBulkRescheduleMutation();
   const isBulk = postIds.length > 0;
@@ -44,6 +45,7 @@ export function RescheduleModal({ post, postIds = [], onClose }: RescheduleModal
       toast.success('Post rescheduled successfully!', {
         description: `New slot: ${new Date(updated.scheduledAt).toLocaleString()}`,
       });
+      onSuccess?.();
       onClose();
     },
     onError: (_, __, context) => {
@@ -78,6 +80,7 @@ export function RescheduleModal({ post, postIds = [], onClose }: RescheduleModal
         { ids: postIds, newTime: scheduledAt },
         {
           onSuccess: () => {
+            onSuccess?.();
             onClose();
           },
         }

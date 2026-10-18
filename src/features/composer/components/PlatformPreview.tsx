@@ -196,7 +196,7 @@ export function PlatformPreview({
               {/* Media Layer */}
               {mediaUrl ? (
                 <div className="absolute inset-0 w-full h-full">
-                  <ProgressiveImage src={mediaUrl} alt="TikTok Web Media" debounceMs={400} />
+                  <ProgressiveImage src={mediaUrl} alt="TikTok Web Media" />
                   {/* Top & Bottom localized gradients for web player legibility */}
                   <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-black/80 via-black/20 to-transparent pointer-events-none z-[1]" />
                   <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-black/95 via-black/70 to-transparent pointer-events-none z-[1]" />
@@ -358,7 +358,7 @@ export function PlatformPreview({
             {/* Media Asset (1:1 Ratio) */}
             {mediaUrl ? (
               <div className="aspect-square rounded-xl overflow-hidden bg-zinc-900 w-full border border-zinc-800/80">
-                <ProgressiveImage src={mediaUrl} alt="Instagram Media" debounceMs={400} />
+                <ProgressiveImage src={mediaUrl} alt="Instagram Media" />
               </div>
             ) : (
               <div className="aspect-square rounded-xl bg-zinc-900/60 border border-dashed border-rose-900/50 flex flex-col items-center justify-center p-4 text-center w-full">
@@ -391,7 +391,7 @@ export function PlatformPreview({
                 )}
               </div>
               <p className="text-[11px] text-zinc-500 pt-0.5">View all 34 comments</p>
-              <p className="text-[9px] uppercase tracking-wider text-zinc-500">  See translation</p>
+              <p className="text-[9px] tracking-wider text-zinc-500"> See translation</p>
             </div>
           </div>
         )}
@@ -428,7 +428,7 @@ export function PlatformPreview({
                 {/* Media Attachment (16:9 Video/Image Card) */}
                 {mediaUrl && (
                   <div className="mt-3 rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 aspect-video w-full shadow-md">
-                    <ProgressiveImage src={mediaUrl} alt="X media attachment" debounceMs={400} />
+                    <ProgressiveImage src={mediaUrl} alt="X media attachment" />
                   </div>
                 )}
 
@@ -494,7 +494,7 @@ export function PlatformPreview({
             {/* Media Attachment */}
             {mediaUrl && (
               <div className="rounded-xl overflow-hidden border border-zinc-800 aspect-video bg-zinc-950 w-full shadow-md">
-                <ProgressiveImage src={mediaUrl} alt="Facebook attachment" debounceMs={400} />
+                <ProgressiveImage src={mediaUrl} alt="Facebook attachment" />
               </div>
             )}
 
@@ -567,7 +567,7 @@ export function PlatformPreview({
             {/* Media Attachment */}
             {mediaUrl && (
               <div className="rounded-xl overflow-hidden border border-zinc-800 aspect-video bg-zinc-950 w-full shadow-md">
-                <ProgressiveImage src={mediaUrl} alt="LinkedIn attachment" debounceMs={400} />
+                <ProgressiveImage src={mediaUrl} alt="LinkedIn attachment" />
               </div>
             )}
 

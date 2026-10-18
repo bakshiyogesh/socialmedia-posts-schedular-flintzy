@@ -15,6 +15,7 @@ interface GroupedDateSectionProps {
   onReschedule?: (post: Post) => void;
   onReconnect?: (post: Post) => void;
   onFixDimensions?: (post: Post) => void;
+  onDelete?: (post: Post) => void;
 }
 
 export function GroupedDateSection({
@@ -26,6 +27,7 @@ export function GroupedDateSection({
   onReschedule,
   onReconnect,
   onFixDimensions,
+  onDelete,
 }: GroupedDateSectionProps) {
   const isToday = group.label === 'Today';
   const isTomorrow = group.label === 'Tomorrow';
@@ -75,6 +77,7 @@ export function GroupedDateSection({
             onReschedule={onReschedule}
             onReconnect={onReconnect}
             onFixDimensions={onFixDimensions}
+            onDelete={onDelete}
           />
         ))}
       </div>

@@ -9,12 +9,18 @@ interface MonthCalendarViewProps {
   posts: Post[];
   onDuplicatePost: (post: Post) => void;
   onScheduleForDate?: (dateKey: string) => void;
+  onEditPost?: (post: Post) => void;
+  onReschedulePost?: (post: Post) => void;
+  onDeletePost?: (post: Post) => void;
 }
 
 export function MonthCalendarView({
   posts,
   onDuplicatePost,
   onScheduleForDate,
+  onEditPost,
+  onReschedulePost,
+  onDeletePost,
 }: MonthCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
@@ -250,7 +256,14 @@ export function MonthCalendarView({
           ) : (
             <div className="space-y-3">
               {selectedPosts.map((post) => (
-                <PostCard key={post.id} post={post} onDuplicate={onDuplicatePost} />
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onDuplicate={onDuplicatePost}
+                  onEdit={onEditPost}
+                  onReschedule={onReschedulePost}
+                  onDelete={onDeletePost}
+                />
               ))}
             </div>
           )}

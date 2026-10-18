@@ -53,8 +53,21 @@ export function ProgressiveImage({
   // Reset load state whenever the target URL changes
   useEffect(() => {
     setLqipLoaded(false);
-    setState(debouncedSrc ? 'loading' : 'idle');
+    if (!debouncedSrc) {
+      setState('idle');
+      return;
+    }
+    setState('loading');
   }, [debouncedSrc]);
+
+  // Safeguard: if an external image hangs or takes longer than 6 seconds, gracefully flag error
+  useEffect(() => {
+    if (state !== 'loading' || !debouncedSrc) return;
+    const timer = setTimeout(() => {
+      setState('error');
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [state, debouncedSrc]);
 
   useEffect(() => {
     onStateChange?.(state);
@@ -79,8 +92,10 @@ export function ProgressiveImage({
           src={lqip}
           alt=""
           aria-hidden
+          referrerPolicy="no-referrer"
+          loading="eager"
           onLoad={() => setLqipLoaded(true)}
-          className={`absolute inset-0 w-full h-full object-cover scale-110 blur-md transition-opacity duration-300 ${
+          className={`absolute inset-0 w-full h-full object-cover scale-110 blur-md transition-opacity duration-200 ${
             lqipLoaded && !isLoaded ? 'opacity-100' : 'opacity-0'
           }`}
         />
@@ -99,7 +114,7 @@ export function ProgressiveImage({
           preload="auto"
           onLoadedData={() => setState('loaded')}
           onError={() => setState('error')}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           }`}
         />
@@ -109,15 +124,21 @@ export function ProgressiveImage({
       {debouncedSrc && state !== 'error' && !isVideoItem && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={(el) => {
+            // Immediate cache check: if browser already loaded/cached this image, mark loaded instantly
+            if (el && el.complete && el.naturalWidth > 0 && state !== 'loaded') {
+              setState('loaded');
+            }
+          }}
           key={debouncedSrc}
           src={debouncedSrc}
           alt={alt}
-          decoding="async"
-          loading="lazy"
+          referrerPolicy="no-referrer"
+          loading="eager"
           onLoad={() => setState('loaded')}
           onError={() => setState('error')}
-          className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out ${
-            isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-lg scale-105'
+          className={`absolute inset-0 w-full h-full object-cover transition-all duration-200 ease-out ${
+            isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-sm scale-102'
           }`}
         />
       )}

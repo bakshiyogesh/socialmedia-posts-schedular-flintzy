@@ -19,6 +19,7 @@ interface PostCardProps {
   onReschedule?: (post: Post) => void;
   onReconnect?: (post: Post) => void;
   onFixDimensions?: (post: Post) => void;
+  onDelete?: (post: Post) => void;
 }
 
 export function PostCard({
@@ -30,6 +31,7 @@ export function PostCard({
   onReschedule,
   onReconnect,
   onFixDimensions,
+  onDelete,
 }: PostCardProps) {
   const retryMutation = useRetryPostMutation();
   const deleteMutation = useDeletePostMutation();
@@ -42,7 +44,11 @@ export function PostCard({
   };
 
   const handleDelete = () => {
-    deleteMutation.mutate(post.id);
+    if (onDelete) {
+      onDelete(post);
+    } else {
+      deleteMutation.mutate(post.id);
+    }
   };
 
   const getErrorTypeConfig = (type?: ErrorCategory) => {
