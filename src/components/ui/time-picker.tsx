@@ -11,6 +11,8 @@ export interface TimePickerProps {
   onChange?: (timeStr: string) => void;
   placeholder?: string;
   className?: string;
+  side?: 'top' | 'bottom' | 'auto';
+  align?: 'start' | 'center' | 'end';
 }
 
 export function TimePicker({
@@ -18,6 +20,8 @@ export function TimePicker({
   onChange,
   placeholder = 'Pick a time',
   className,
+  side = 'auto',
+  align = 'start',
 }: TimePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -81,7 +85,11 @@ export function TimePicker({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[300px] p-3.5 bg-zinc-950 border-zinc-800 shadow-2xl space-y-3" align="start">
+      <PopoverContent
+        side={side}
+        align={align}
+        className="w-[300px] p-3.5 bg-zinc-950 border-zinc-800 shadow-2xl space-y-3"
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
           <span className="text-xs font-bold text-zinc-200">Select Time</span>

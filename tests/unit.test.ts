@@ -385,3 +385,74 @@ describe('IndexedDB Draft Media Recovery', () => {
   });
 });
 
+describe('Popover Auto-Flip Collision Detection', () => {
+  it('defaults to safe spacing when element is null or during SSR', async () => {
+    const { getAvailableVerticalSpaces } = await import('@/components/ui/popover-position');
+    const spaces = getAvailableVerticalSpaces(null);
+    expect(spaces.spaceBelow).toBe(500);
+    expect(spaces.spaceAbove).toBe(500);
+  });
+
+  it('determines placement as "top" when space below is insufficient for calendar height', async () => {
+    const { determinePopoverSide } = await import('@/components/ui/popover-position');
+
+    // Space below is 80px (e.g. cut off by modal footer), space above is 450px
+    const side = determinePopoverSide({ spaceBelow: 80, spaceAbove: 450 }, 310);
+    expect(side).toBe('top');
+  });
+
+  it('determines placement as "bottom" when there is ample space below', async () => {
+    const { determinePopoverSide } = await import('@/components/ui/popover-position');
+
+    // Space below is 500px, space above is 50px
+    const side = determinePopoverSide({ spaceBelow: 500, spaceAbove: 50 }, 310);
+    expect(side).toBe('bottom');
+  });
+
+  it('calculates available space correctly when walking clipping ancestor elements', async () => {
+    const { getAvailableVerticalSpaces, determinePopoverSide } = await import('@/components/ui/popover-position');
+
+    // Mock window & getComputedStyle
+    const origWindow = globalThis.window;
+    // @ts-expect-error mock window
+    globalThis.window = {
+      innerHeight: 800,
+      getComputedStyle: (el: any) => el.style || {},
+    };
+
+    const mockParent = {
+      style: { overflowY: 'auto' },
+      parentElement: null,
+      getBoundingClientRect: () => ({
+        top: 100,
+        bottom: 700,
+        height: 600,
+      }),
+    };
+
+    const mockTrigger = {
+      style: {},
+      parentElement: mockParent,
+      getBoundingClientRect: () => ({
+        top: 640,
+        bottom: 680,
+        height: 40,
+      }),
+    };
+
+    try {
+      const spaces = getAvailableVerticalSpaces(mockTrigger as any);
+      // Container bottom (700) - trigger bottom (680) = 20px
+      expect(spaces.spaceBelow).toBe(20);
+      // Trigger top (640) - container top (100) = 540px
+      expect(spaces.spaceAbove).toBe(540);
+
+      const side = determinePopoverSide(spaces, 310);
+      expect(side).toBe('top');
+    } finally {
+      globalThis.window = origWindow;
+    }
+  });
+});
+
+
