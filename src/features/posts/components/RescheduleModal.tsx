@@ -20,7 +20,9 @@ export function RescheduleModal({ post, postIds = [], onClose, onSuccess }: Resc
   const queryClient = useQueryClient();
   const bulkRescheduleMutation = useBulkRescheduleMutation();
   const isBulk = postIds.length > 0;
-  
+  const isMultiplePosts = postIds.length > 1;
+  const postPronoun = isMultiplePosts ? 'Posts' : 'Post';
+
   const [scheduledAt, setScheduledAt] = useState<string>(() => {
     return post ? post.scheduledAt : new Date(Date.now() + 1000 * 60 * 60 * 2).toISOString();
   });
@@ -100,14 +102,14 @@ export function RescheduleModal({ post, postIds = [], onClose, onSuccess }: Resc
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              {isBulk ? <CalendarClock className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+              {isBulk && postIds.length > 1 ? <CalendarClock className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
             </div>
             <div>
               <h3 className="text-sm font-bold text-zinc-100">
-                {isBulk ? `Reschedule ${postIds.length} Posts` : 'Reschedule Post'}
+                {isBulk && postIds.length > 1 ? `Reschedule ${postIds.length} Posts` : 'Reschedule Post'}
               </h3>
               <p className="text-xs text-zinc-400">
-                {isBulk ? 'Set a new future publishing timeslot for all selected items' : 'Select a new future timeslot'}
+                {isBulk && postIds.length > 1 ? 'Set a new future publishing timeslot for all selected items' : 'Select a new future timeslot'}
               </p>
             </div>
           </div>
@@ -144,8 +146,8 @@ export function RescheduleModal({ post, postIds = [], onClose, onSuccess }: Resc
                 {isPending
                   ? 'Updating...'
                   : isBulk
-                  ? `Reschedule ${postIds.length} Posts`
-                  : 'Confirm Reschedule'}
+                    ? `Reschedule ${isMultiplePosts ? `${postIds.length} ` : ''} ${postPronoun}`
+                    : 'Confirm Reschedule'}
               </span>
             </button>
           </div>
