@@ -4,6 +4,7 @@ import React from 'react';
 import { RotateCcw } from 'lucide-react';
 import { SearchInput } from './SearchInput';
 import { PlatformFilter } from './PlatformFilter';
+import { DateFilter } from './DateFilter';
 import type { FilterState, PlatformId } from '@/types';
 
 interface FilterBarProps {
@@ -35,8 +36,14 @@ export function FilterBar({
         onSearchChange={(q) => onUpdateFilters({ q })}
       />
 
-      {/* Platform Multi-Select & Reset */}
+      {/* Date & Platform Filters + Reset */}
       <div className="flex items-center justify-between md:justify-end gap-2 flex-wrap">
+        <DateFilter
+          selectedDate={filters.date}
+          onSelectDate={(date) => onUpdateFilters({ date })}
+          onClear={() => onUpdateFilters({ date: 'all' })}
+        />
+
         <PlatformFilter
           selectedPlatforms={filters.platforms}
           onTogglePlatform={handleTogglePlatform}

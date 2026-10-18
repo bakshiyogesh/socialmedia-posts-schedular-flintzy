@@ -1,5 +1,6 @@
 import { PLATFORMS } from '@/config/platforms';
 import { isFutureDate } from '@/lib/time';
+import { normalizeMediaUrl } from '@/lib/media';
 import type { PlatformId, PreFlightIssue } from '@/types';
 
 export interface PostFormInput {
@@ -25,6 +26,7 @@ export function validatePost(input: PostFormInput): ValidationResult {
     instagram: { count: 0, limit: PLATFORMS.instagram.charLimit, remaining: PLATFORMS.instagram.charLimit, isOver: false },
     tiktok: { count: 0, limit: PLATFORMS.tiktok.charLimit, remaining: PLATFORMS.tiktok.charLimit, isOver: false },
     facebook: { count: 0, limit: PLATFORMS.facebook.charLimit, remaining: PLATFORMS.facebook.charLimit, isOver: false },
+    linkedin: { count: 0, limit: PLATFORMS.linkedin.charLimit, remaining: PLATFORMS.linkedin.charLimit, isOver: false },
   };
 
   // 1. Platform Selection Check
@@ -87,21 +89,26 @@ export function validatePost(input: PostFormInput): ValidationResult {
 
   // 4. Media URL format validation (if provided)
   if (input.mediaUrl && input.mediaUrl.trim().length > 0) {
-    try {
-      const url = new URL(input.mediaUrl.trim());
-      if (!['http:', 'https:'].includes(url.protocol)) {
+    const normalized = normalizeMediaUrl(input.mediaUrl);
+    const isLocalAttachment = normalized.startsWith('data:') || normalized.startsWith('blob:');
+
+    if (!isLocalAttachment) {
+      try {
+        const url = new URL(normalized);
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          blockers.push({
+            type: 'error',
+            field: 'media',
+            message: 'Media URL must use http:// or https:// protocol.',
+          });
+        }
+      } catch {
         blockers.push({
           type: 'error',
           field: 'media',
-          message: 'Media URL must use http:// or https:// protocol.',
+          message: 'Invalid media URL format.',
         });
       }
-    } catch {
-      blockers.push({
-        type: 'error',
-        field: 'media',
-        message: 'Invalid media URL format.',
-      });
     }
   }
 

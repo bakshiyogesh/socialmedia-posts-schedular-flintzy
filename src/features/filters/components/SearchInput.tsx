@@ -4,11 +4,11 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 
 interface SearchInputProps {
-  initialValue: string;
-  onSearchChange: (value: string) => void;
+  initialValue?: string;
+  onSearchChange?: (value: string) => void;
 }
 
-export function SearchInput({ initialValue, onSearchChange }: SearchInputProps) {
+export function SearchInput({ initialValue = "", onSearchChange = () => { } }: SearchInputProps) {
   const [value, setValue] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
 

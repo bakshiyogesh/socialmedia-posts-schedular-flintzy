@@ -189,3 +189,56 @@ export function groupPostsByDay(posts: Post[], referenceDate = new Date()): DayG
 
   return [...todayGroup, ...tomorrowGroup, ...futureGroups, ...earlierGroup];
 }
+
+/**
+ * Formats a timestamp into compact social media relative time notations:
+ * e.g., '1hr ago', '1d', '2d', '1w', '1mo', '1yr'.
+ */
+export function formatSocialTimestamp(
+  targetDateInput?: string | Date,
+  baseDate = new Date()
+): { short: string; ago: string } {
+  if (!targetDateInput) {
+    return { short: '1d', ago: '1d ago' };
+  }
+
+  try {
+    const target = new Date(targetDateInput).getTime();
+    if (isNaN(target)) {
+      return { short: '1d', ago: '1d ago' };
+    }
+
+    const base = baseDate.getTime();
+    const diffMs = Math.abs(base - target);
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+
+    if (diffYears >= 1) {
+      return { short: `${diffYears}yr`, ago: `${diffYears}yr ago` };
+    }
+    if (diffMonths >= 1) {
+      return { short: `${diffMonths}mo`, ago: `${diffMonths}mo ago` };
+    }
+    if (diffWeeks >= 1) {
+      return { short: `${diffWeeks}w`, ago: `${diffWeeks}w ago` };
+    }
+    if (diffDays >= 1) {
+      return { short: `${diffDays}d`, ago: `${diffDays}d ago` };
+    }
+    if (diffHours >= 1) {
+      return { short: `${diffHours}hr ago`, ago: `${diffHours}hr ago` };
+    }
+    if (diffMin >= 1) {
+      return { short: `${diffMin}m ago`, ago: `${diffMin}m ago` };
+    }
+    return { short: '1hr ago', ago: '1hr ago' };
+  } catch {
+    return { short: '1d', ago: '1d ago' };
+  }
+}
+

@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Send, Image as ImageIcon, SlidersHorizontal } from 'lucide-react';
+import { X, Send, SlidersHorizontal } from 'lucide-react';
 import { PlatformSelector } from './PlatformSelector';
 import { CharacterCounters } from './CharacterCounters';
 import { PreFlightPanel } from './PreFlightPanel';
 import { DateTimePicker } from './DateTimePicker';
 import { PlatformPreview } from './PlatformPreview';
+import { MediaUploader } from './MediaUploader';
 import { validatePost, type PostFormInput } from '../utils/validation';
-import { useCreatePostMutation } from '@/features/posts/hooks/usePosts';
+import { useCreatePostMutation, useUpdatePostMutation } from '@/features/posts/hooks/usePosts';
 import { PLATFORMS } from '@/config/platforms';
 import type { PlatformId, Post, DraftPost } from '@/types';
+import type { ImageLoadState } from '@/components/shared/ProgressiveImage';
+import { normalizeMediaUrl } from '@/lib/media';
 import { toast } from 'sonner';
-import { ProgressiveImage, type ImageLoadState } from '@/components/shared/ProgressiveImage';
+import { getDraftMedia, clearDraftMedia } from '@/lib/storage/draftMediaDb';
 
 const DRAFT_STORAGE_KEY = 'flintzy_composer_draft';
 const DEFAULT_PLATFORMS: PlatformId[] = ['x', 'instagram'];
@@ -22,17 +25,26 @@ interface PostComposerModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialPost?: Post | null;
+  initialDate?: string | null;
+  mode?: 'create' | 'edit';
 }
 
 export function PostComposerModal({
   isOpen,
   onClose,
   initialPost,
+  initialDate,
+  mode = 'create',
 }: PostComposerModalProps) {
   const [content, setContent] = useState('');
   const [platforms, setPlatforms] = useState<PlatformId[]>(DEFAULT_PLATFORMS);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaLoadState, setMediaLoadState] = useState<ImageLoadState>('idle');
+  const [mediaFileInfo, setMediaFileInfo] = useState<{
+    fileName: string | null;
+    fileSize: string | null;
+    fileType: 'image' | 'video' | null;
+  }>({ fileName: null, fileSize: null, fileType: null });
   // Default +2 hours in future
   const [scheduledAt, setScheduledAt] = useState<string>(defaultScheduledAt);
   const [overrides, setOverrides] = useState<Partial<Record<PlatformId, { content?: string }>>>({});
@@ -43,18 +55,43 @@ export function PostComposerModal({
    * The modal stays mounted while closed, so state must be reset explicitly.
    * Prefills from `source` when duplicating, otherwise returns to a blank form.
    */
-  const resetForm = useCallback((source?: Post | null) => {
+  const resetForm = useCallback((source?: Post | null, prefillDate?: string | null) => {
     setContent(source?.content ?? '');
     setPlatforms(source?.platforms ?? DEFAULT_PLATFORMS);
     setMediaUrl(source?.mediaUrl ?? '');
     setMediaLoadState('idle');
-    setScheduledAt(defaultScheduledAt());
+    setMediaFileInfo({ fileName: null, fileSize: null, fileType: null });
+    
+    if (source?.scheduledAt) {
+      setScheduledAt(source.scheduledAt);
+    } else if (prefillDate) {
+      const [y, m, d] = prefillDate.split('-').map(Number);
+      const now = new Date();
+      const isToday =
+        now.getFullYear() === y &&
+        now.getMonth() === m - 1 &&
+        now.getDate() === d;
+
+      let target: Date;
+      if (isToday) {
+        target = new Date(now.getTime() + 1000 * 60 * 60 * 2);
+      } else {
+        target = new Date(y, m - 1, d, 10, 0, 0);
+        if (target.getTime() <= now.getTime()) {
+          target = new Date(y, m - 1, d, 12, 0, 0);
+        }
+      }
+      setScheduledAt(target.toISOString());
+    } else {
+      setScheduledAt(defaultScheduledAt());
+    }
+
     setOverrides(source?.platformOverrides ?? {});
     setShowOverrides(false);
     setHasDraftPrompt(false);
   }, []);
 
-  // Start every open from a clean slate (or the duplicated post),
+  // Start every open from a clean slate (or the duplicated post / initial date),
   // then offer to restore an unsent draft for brand-new posts.
   // Also clear on close so stale state never leaks into the next session
   // (unsent work is already persisted by the autosave below).
@@ -63,21 +100,32 @@ export function PostComposerModal({
       resetForm();
       return;
     }
-    resetForm(initialPost);
+    resetForm(initialPost, initialDate);
 
-    if (initialPost) return;
+    if (initialPost || initialDate) return;
     try {
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      let hasLocalDraft = false;
       if (saved) {
         const draft: DraftPost = JSON.parse(saved);
         if (draft.content || draft.mediaUrl) {
-          setHasDraftPrompt(true);
+          hasLocalDraft = true;
         }
       }
+      // Check both localStorage text draft and IndexedDB binary media draft
+      getDraftMedia()
+        .then((mediaRecord) => {
+          if (hasLocalDraft || Boolean(mediaRecord)) {
+            setHasDraftPrompt(true);
+          }
+        })
+        .catch(() => {
+          if (hasLocalDraft) setHasDraftPrompt(true);
+        });
     } catch {
       // Ignore JSON error
     }
-  }, [isOpen, initialPost, resetForm]);
+  }, [isOpen, initialPost, initialDate, resetForm]);
 
   // Lock background scroll when modal is open
   useEffect(() => {
@@ -90,22 +138,48 @@ export function PostComposerModal({
     }
   }, [isOpen]);
 
+  // Prevent accidental page reloads or tab closures when unsaved work is in progress
+  useEffect(() => {
+    if (!isOpen) return;
+    const hasUnsavedWork = Boolean(content.trim() || mediaUrl.trim());
+    if (!hasUnsavedWork) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ''; // Standard trigger for modern browsers
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isOpen, content, mediaUrl]);
+
   // Autosave draft to localStorage (only while open, and only when there is real work to save)
   useEffect(() => {
     if (isOpen && !initialPost && (content.trim() || mediaUrl.trim())) {
+      // Avoid saving huge local base64 files or session-only blob URLs to localStorage to prevent quota exhaustion
+      const safeMediaUrl =
+        (mediaUrl.startsWith('data:') && mediaUrl.length > 200000) || mediaUrl.startsWith('blob:')
+          ? ''
+          : mediaUrl;
       const draft: DraftPost = {
         content,
         platforms,
-        mediaUrl,
+        mediaUrl: safeMediaUrl,
         scheduledAt,
         platformOverrides: overrides,
         savedAt: new Date().toISOString(),
       };
-      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      } catch {
+        // quota exceeded, silently continue
+      }
     }
   }, [isOpen, content, platforms, mediaUrl, scheduledAt, overrides, initialPost]);
 
-  const restoreDraft = () => {
+  const restoreDraft = async () => {
     try {
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (saved) {
@@ -115,8 +189,23 @@ export function PostComposerModal({
         setMediaUrl(draft.mediaUrl || '');
         if (draft.scheduledAt) setScheduledAt(draft.scheduledAt);
         if (draft.platformOverrides) setOverrides(draft.platformOverrides);
-        toast.success('Draft restored');
       }
+
+      // Check if an offline binary media attachment is saved in IndexedDB
+      const mediaRecord = await getDraftMedia().catch(() => null);
+      if (mediaRecord) {
+        const rawUrl = URL.createObjectURL(mediaRecord.blob);
+        const objectUrl = mediaRecord.fileType === 'video' ? `${rawUrl}#video` : rawUrl;
+        setMediaUrl(objectUrl);
+        setMediaFileInfo({
+          fileName: mediaRecord.fileName,
+          fileSize: mediaRecord.fileSize,
+          fileType: mediaRecord.fileType,
+        });
+        setMediaLoadState('loaded');
+      }
+
+      toast.success('Draft restored');
     } catch {
       toast.error('Failed to restore draft');
     }
@@ -125,6 +214,8 @@ export function PostComposerModal({
 
   const discardDraft = () => {
     localStorage.removeItem(DRAFT_STORAGE_KEY);
+    clearDraftMedia().catch(() => {});
+    setMediaFileInfo({ fileName: null, fileSize: null, fileType: null });
     setHasDraftPrompt(false);
   };
 
@@ -139,11 +230,7 @@ export function PostComposerModal({
     () => ({
       content,
       platforms,
-      mediaUrl: mediaUrl.trim()
-        ? mediaUrl.trim().startsWith('http')
-          ? mediaUrl.trim()
-          : `https://${mediaUrl.trim()}`
-        : undefined,
+      mediaUrl: mediaUrl.trim() ? normalizeMediaUrl(mediaUrl) : undefined,
       scheduledAt,
       platformOverrides: overrides,
     }),
@@ -152,33 +239,58 @@ export function PostComposerModal({
 
   const validation = useMemo(() => validatePost(formInput), [formInput]);
 
+  const isEditing = mode === 'edit' && !!initialPost;
+  const updateMutation = useUpdatePostMutation();
+
   const createMutation = useCreatePostMutation(() => {
     // Post is persisted: drop the draft and clear the form so the next open is blank.
     localStorage.removeItem(DRAFT_STORAGE_KEY);
+    clearDraftMedia().catch(() => {});
     resetForm();
     onClose();
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!validation.isValid) {
       toast.error('Cannot schedule: Please resolve pre-flight issues.');
       return;
     }
-    createMutation.mutate(formInput);
-  };
+    if (isEditing && initialPost) {
+      updateMutation.mutate(
+        {
+          id: initialPost.id,
+          updates: {
+            ...formInput,
+            status: initialPost.status === 'failed' ? 'scheduled' : initialPost.status,
+            errorMessage: undefined,
+          },
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+            onClose();
+          },
+        }
+      );
+    } else {
+      createMutation.mutate(formInput);
+    }
+  }, [validation.isValid, isEditing, initialPost, updateMutation, formInput, resetForm, onClose, createMutation]);
 
   // Keyboard shortcut Ctrl/Cmd + Enter to schedule
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && isOpen && validation.isValid) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && isOpen && validation.isValid && !isPending) {
         e.preventDefault();
-        createMutation.mutate(formInput);
+        handleSubmit();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, validation.isValid, createMutation, formInput]);
+  }, [isOpen, validation.isValid, isPending, handleSubmit]);
 
   if (!isOpen) return null;
 
@@ -194,10 +306,12 @@ export function PostComposerModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/80 bg-zinc-900/60">
           <div>
             <h2 id="composer-title" className="text-base font-bold text-zinc-100">
-              {initialPost ? 'Duplicate Post' : 'New Multi-Channel Post'}
+              {isEditing ? 'Edit Scheduled Post' : initialPost ? 'Duplicate Post' : 'New Multi-Channel Post'}
             </h2>
             <p className="text-xs text-zinc-400">
-              One composer. Live pre-flight verification across all channel APIs.
+              {isEditing
+                ? 'Modify post copy, targeted channels, or scheduled timeslot.'
+                : 'One composer. Live pre-flight verification across all channel APIs.'}
             </p>
           </div>
 
@@ -304,93 +418,17 @@ export function PostComposerModal({
               </div>
             )}
 
-            {/* Media Attachment URL */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
-                <span>Media Attachment URL (Image or Video)</span>
-                <span className="text-[11px] text-zinc-500 font-normal">
-                  Required for Instagram & TikTok
-                </span>
-              </label>
-
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-                  <ImageIcon className="w-4 h-4" />
-                </div>
-                <input
-                  type="url"
-                  value={mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/... or paste image link"
-                  className="w-full pl-9 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
-                />
-                {mediaUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setMediaUrl('')}
-                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-500 hover:text-zinc-300"
-                    title="Remove media"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Sample Media Presets */}
-              <div className="space-y-1">
-                <span className="text-[10px] text-zinc-500">Or pick a verified sample asset:</span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {[
-                    { label: '🚀 Launch Graphic', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80' },
-                    { label: '☕ Creative Workspace', url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80' },
-                    { label: '📊 Analytics Chart', url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80' },
-                  ].map((preset, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setMediaUrl(preset.url)}
-                      className="px-2 py-0.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors"
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Live Thumbnail Preview in Composer */}
-              {mediaUrl.trim() && (
-                <div className="flex items-center gap-3 p-2 bg-zinc-900/60 rounded-xl border border-zinc-800">
-                  <div className="w-14 h-14 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 shrink-0">
-                    <ProgressiveImage
-                      src={mediaUrl}
-                      alt="Thumbnail preview"
-                      debounceMs={400}
-                      compact
-                      onStateChange={setMediaLoadState}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    {mediaLoadState === 'error' ? (
-                      <p className="text-xs font-semibold text-rose-400 flex items-center gap-1">
-                        <span>✕</span> Couldn&apos;t load this media URL
-                      </p>
-                    ) : mediaLoadState === 'loaded' ? (
-                      <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-                        <span>✓</span> Media Attached
-                      </p>
-                    ) : (
-                      <p className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full border-2 border-zinc-600 border-t-indigo-400 animate-spin" />
-                        Fetching media…
-                      </p>
-                    )}
-                    <p className="text-[11px] text-zinc-400 truncate font-mono">
-                      {mediaUrl}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Media Attachment (Drag & Drop or URL) */}
+            <MediaUploader
+              mediaUrl={mediaUrl}
+              onMediaChange={setMediaUrl}
+              mediaLoadState={mediaLoadState}
+              onStateChange={setMediaLoadState}
+              fileName={mediaFileInfo.fileName}
+              fileSize={mediaFileInfo.fileSize}
+              fileType={mediaFileInfo.fileType}
+              onFileInfoChange={setMediaFileInfo}
+            />
 
             {/* Date-Time Picker with Local / UTC logic */}
             <DateTimePicker
@@ -403,7 +441,7 @@ export function PostComposerModal({
           </div>
 
           {/* Right Column: Live Simulated Preview (5 cols) */}
-          <div className="lg:col-span-5 min-w-0 w-full flex flex-col min-h-[380px] lg:border-l lg:border-zinc-800/80 lg:pl-6 overflow-hidden">
+          <div className="lg:col-span-5 min-w-0 w-full flex flex-col lg:border-l lg:border-zinc-800/80 lg:pl-6">
             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
               Live Feed Simulation
             </h3>
@@ -412,6 +450,7 @@ export function PostComposerModal({
               content={content}
               mediaUrl={mediaUrl}
               overrides={overrides}
+              scheduledAt={scheduledAt}
             />
           </div>
         </form>
@@ -438,12 +477,18 @@ export function PostComposerModal({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!validation.isValid || createMutation.isPending}
+              disabled={!validation.isValid || isPending}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-lg shadow-indigo-600/25 transition-all"
             >
               <Send className="w-3.5 h-3.5" />
               <span>
-                {createMutation.isPending ? 'Scheduling...' : 'Schedule Post'}
+                {isPending
+                  ? isEditing
+                    ? 'Saving Changes...'
+                    : 'Scheduling...'
+                  : isEditing
+                  ? 'Save Changes'
+                  : 'Schedule Post'}
               </span>
             </button>
           </div>

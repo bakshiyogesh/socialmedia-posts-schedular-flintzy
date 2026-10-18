@@ -14,6 +14,8 @@ export interface DatePickerProps {
   disabledBefore?: Date;
   placeholder?: string;
   className?: string;
+  side?: 'top' | 'bottom' | 'auto';
+  align?: 'start' | 'center' | 'end';
 }
 
 export function DatePicker({
@@ -22,6 +24,8 @@ export function DatePicker({
   disabledBefore,
   placeholder = 'Pick a date',
   className,
+  side = 'auto',
+  align = 'start',
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -44,7 +48,11 @@ export function DatePicker({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-1.5 bg-zinc-950 border-zinc-800 shadow-2xl" align="start">
+      <PopoverContent
+        side={side}
+        align={align}
+        className="w-auto p-1.5 bg-zinc-950 border-zinc-800 shadow-2xl"
+      >
         <Calendar
           selected={date}
           disabledBefore={disabledBefore}

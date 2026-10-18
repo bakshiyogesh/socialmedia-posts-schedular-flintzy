@@ -8,18 +8,26 @@ import type { Post } from '@/types';
 
 interface GroupedDateSectionProps {
   group: DayGroup;
+  selectedPostIds?: string[];
+  onToggleSelect?: (id: string) => void;
+  onEdit?: (post: Post) => void;
   onDuplicate?: (post: Post) => void;
   onReschedule?: (post: Post) => void;
   onReconnect?: (post: Post) => void;
   onFixDimensions?: (post: Post) => void;
+  onDelete?: (post: Post) => void;
 }
 
 export function GroupedDateSection({
   group,
+  selectedPostIds = [],
+  onToggleSelect,
+  onEdit,
   onDuplicate,
   onReschedule,
   onReconnect,
   onFixDimensions,
+  onDelete,
 }: GroupedDateSectionProps) {
   const isToday = group.label === 'Today';
   const isTomorrow = group.label === 'Tomorrow';
@@ -62,10 +70,14 @@ export function GroupedDateSection({
           <PostCard
             key={post.id}
             post={post}
+            isSelected={selectedPostIds.includes(post.id)}
+            onToggleSelect={onToggleSelect}
+            onEdit={onEdit}
             onDuplicate={onDuplicate}
             onReschedule={onReschedule}
             onReconnect={onReconnect}
             onFixDimensions={onFixDimensions}
+            onDelete={onDelete}
           />
         ))}
       </div>

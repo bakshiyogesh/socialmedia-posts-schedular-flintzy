@@ -3,7 +3,11 @@
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Plus, Layers, Calendar } from 'lucide-react';
-import { usePostsQuery } from '@/features/posts/hooks/usePosts';
+import {
+  usePostsQuery,
+  useBulkDeleteMutation,
+  useDeletePostMutation,
+} from '@/features/posts/hooks/usePosts';
 import { StatusSummaryStrip } from '@/features/posts/components/StatusSummaryStrip';
 import { BulkRetryBanner } from '@/features/posts/components/BulkRetryBanner';
 import { FilterBar } from '@/features/filters/components/FilterBar';
@@ -12,6 +16,8 @@ import { MonthCalendarView } from '@/features/calendar/components/MonthCalendarV
 import { PostComposerModal } from '@/features/composer/components/PostComposerModal';
 import { OAuthReconnectModal } from '@/features/posts/components/OAuthReconnectModal';
 import { RescheduleModal } from '@/features/posts/components/RescheduleModal';
+import { DeleteConfirmModal } from '@/features/posts/components/DeleteConfirmModal';
+import { BulkActionsFloatingBar } from '@/features/posts/components/BulkActionsFloatingBar';
 import { filterPosts, computeStatusCounts } from '@/features/filters/utils/filterPosts';
 import type { FilterState, PlatformId, Post, PostStatus } from '@/types';
 
@@ -23,8 +29,20 @@ function DashboardContent() {
   const [viewMode, setViewMode] = useState<'queue' | 'calendar'>('queue');
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerPost, setComposerPost] = useState<Post | null>(null);
+  const [composerMode, setComposerMode] = useState<'create' | 'edit'>('create');
+  const [composerInitialDate, setComposerInitialDate] = useState<string | null>(null);
   const [reconnectPost, setReconnectPost] = useState<Post | null>(null);
   const [reschedulePost, setReschedulePost] = useState<Post | null>(null);
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+  const [bulkRescheduleIds, setBulkRescheduleIds] = useState<string[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: 'single' | 'bulk';
+    ids: string[];
+    post?: Post;
+  } | null>(null);
+
+  const bulkDeleteMutation = useBulkDeleteMutation();
+  const singleDeleteMutation = useDeletePostMutation();
 
   // 1. Synchronize Filter State with URL Query Parameters
   const activePlatforms = useMemo<PlatformId[]>(() => {
@@ -45,13 +63,18 @@ function DashboardContent() {
     return searchParams.get('q') || '';
   }, [searchParams]);
 
+  const activeDate = useMemo<string>(() => {
+    return searchParams.get('date') || 'all';
+  }, [searchParams]);
+
   const filters: FilterState = useMemo(
     () => ({
       platforms: activePlatforms,
       status: activeStatus,
       q: searchQuery,
+      date: activeDate,
     }),
-    [activePlatforms, activeStatus, searchQuery]
+    [activePlatforms, activeStatus, searchQuery, activeDate]
   );
 
   const updateFiltersInUrl = useCallback(
@@ -82,6 +105,14 @@ function DashboardContent() {
         }
       }
 
+      if (newFilters.date !== undefined) {
+        if (newFilters.date && newFilters.date !== 'all') {
+          params.set('date', newFilters.date.trim());
+        } else {
+          params.delete('date');
+        }
+      }
+
       const queryString = params.toString();
       router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
         scroll: false,
@@ -107,7 +138,10 @@ function DashboardContent() {
   );
 
   const hasActiveFilters =
-    filters.platforms.length > 0 || filters.status !== 'all' || filters.q !== '';
+    filters.platforms.length > 0 ||
+    filters.status !== 'all' ||
+    filters.q !== '' ||
+    (Boolean(filters.date) && filters.date !== 'all');
 
   // 5. Global 'C' shortcut to open composer
   useEffect(() => {
@@ -129,6 +163,15 @@ function DashboardContent() {
 
   const handleDuplicate = (post: Post) => {
     setComposerPost(post);
+    setComposerMode('create');
+    setComposerInitialDate(null);
+    setIsComposerOpen(true);
+  };
+
+  const handleEdit = (post: Post) => {
+    setComposerPost(post);
+    setComposerMode('edit');
+    setComposerInitialDate(null);
     setIsComposerOpen(true);
   };
 
@@ -138,12 +181,70 @@ function DashboardContent() {
       ...post,
       mediaUrl: 'https://images.unsplash.com/photo-1579869847514-7c1a19d2d2ad?w=800&auto=format&fit=crop&q=80',
     });
+    setComposerMode('create');
+    setComposerInitialDate(null);
     setIsComposerOpen(true);
   };
 
   const handleOpenNew = () => {
     setComposerPost(null);
+    setComposerMode('create');
+    setComposerInitialDate(null);
     setIsComposerOpen(true);
+  };
+
+  const handleScheduleForDate = (dateKey: string) => {
+    setComposerPost(null);
+    setComposerMode('create');
+    setComposerInitialDate(dateKey);
+    setIsComposerOpen(true);
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedPostIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeletePost = (post: Post) => {
+    setDeleteTarget({
+      type: 'single',
+      ids: [post.id],
+      post,
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedPostIds.length === 0) return;
+    setDeleteTarget({
+      type: 'bulk',
+      ids: selectedPostIds,
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === 'bulk') {
+      bulkDeleteMutation.mutate(deleteTarget.ids, {
+        onSuccess: () => {
+          setSelectedPostIds([]);
+        },
+        onSettled: () => {
+          setDeleteTarget(null);
+        },
+      });
+    } else {
+      const singleId = deleteTarget.ids[0];
+      singleDeleteMutation.mutate(singleId, {
+        onSuccess: () => {
+          setSelectedPostIds((prev) => prev.filter((id) => id !== singleId));
+        },
+        onSettled: () => {
+          setDeleteTarget(null);
+        },
+      });
+    }
   };
 
   return (
@@ -161,9 +262,9 @@ function DashboardContent() {
                 <span className="font-bold text-base tracking-tight text-white">
                   Flintzy
                 </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                {/* <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   Scheduler
-                </span>
+                </span> */}
               </div>
               <p className="text-[11px] text-zinc-400 hidden sm:block">
                 Never publish something broken.
@@ -178,11 +279,10 @@ function DashboardContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('queue')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  viewMode === 'queue'
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'queue'
                     ? 'bg-zinc-800 text-zinc-100 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-200'
-                }`}
+                  }`}
               >
                 <Layers className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Timeline</span>
@@ -190,11 +290,10 @@ function DashboardContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('calendar')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  viewMode === 'calendar'
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'calendar'
                     ? 'bg-zinc-800 text-zinc-100 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-200'
-                }`}
+                  }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Month</span>
@@ -245,6 +344,10 @@ function DashboardContent() {
           <MonthCalendarView
             posts={filteredPosts}
             onDuplicatePost={handleDuplicate}
+            onScheduleForDate={handleScheduleForDate}
+            onEditPost={handleEdit}
+            onReschedulePost={(post) => setReschedulePost(post)}
+            onDeletePost={handleDeletePost}
           />
         ) : (
           <>
@@ -270,23 +373,40 @@ function DashboardContent() {
               hasFilters={hasActiveFilters}
               onClearFilters={handleResetFilters}
               onOpenComposer={handleOpenNew}
+              selectedPostIds={selectedPostIds}
+              onToggleSelectPost={handleToggleSelect}
+              onEditPost={handleEdit}
               onDuplicatePost={handleDuplicate}
               onReschedulePost={(post) => setReschedulePost(post)}
               onReconnectAccount={(post) => setReconnectPost(post)}
               onFixDimensions={handleFixDimensions}
+              onDeletePost={handleDeletePost}
             />
           </>
         )}
       </main>
 
+      {/* Floating Bulk Actions Toolbar */}
+      <BulkActionsFloatingBar
+        selectedCount={selectedPostIds.length}
+        onReschedule={() => setBulkRescheduleIds(selectedPostIds)}
+        onDelete={handleBulkDelete}
+        onClear={() => setSelectedPostIds([])}
+        isDeleting={bulkDeleteMutation.isPending || singleDeleteMutation.isPending}
+      />
+
       {/* Post Composer Modal */}
       <PostComposerModal
         isOpen={isComposerOpen}
+        mode={composerMode}
         onClose={() => {
           setIsComposerOpen(false);
           setComposerPost(null);
+          setComposerInitialDate(null);
+          setComposerMode('create');
         }}
         initialPost={composerPost}
+        initialDate={composerInitialDate}
       />
 
       {/* OAuth Reconnect Dialog */}
@@ -295,10 +415,27 @@ function DashboardContent() {
         onClose={() => setReconnectPost(null)}
       />
 
-      {/* Inline Reschedule Dialog */}
+      {/* Inline Reschedule Dialog (Supports Single & Bulk) */}
       <RescheduleModal
         post={reschedulePost}
-        onClose={() => setReschedulePost(null)}
+        postIds={bulkRescheduleIds}
+        onClose={() => {
+          setReschedulePost(null);
+          setBulkRescheduleIds([]);
+        }}
+        onSuccess={() => {
+          setSelectedPostIds([]);
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmModal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={singleDeleteMutation.isPending || bulkDeleteMutation.isPending}
+        count={deleteTarget?.ids.length ?? 1}
+        postExcerpt={deleteTarget?.post?.content}
       />
     </div>
   );

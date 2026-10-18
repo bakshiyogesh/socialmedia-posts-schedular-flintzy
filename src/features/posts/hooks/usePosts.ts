@@ -55,11 +55,11 @@ export function useRetryPostMutation() {
           previousPosts.map((p) =>
             p.id === id
               ? {
-                  ...p,
-                  status: 'scheduled',
-                  errorMessage: undefined,
-                  errorType: undefined,
-                }
+                ...p,
+                status: 'scheduled',
+                errorMessage: undefined,
+                errorType: undefined,
+              }
               : p
           )
         );
@@ -194,6 +194,153 @@ export function useDeletePostMutation() {
         queryClient.setQueryData(POSTS_QUERY_KEY, context.previousPosts);
       }
       toast.error('Failed to delete post.');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
+    },
+  });
+}
+
+export function useUpdatePostMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<Post> }) =>
+      postsApi.updatePost(id, updates),
+    onMutate: async ({ id, updates }) => {
+      await queryClient.cancelQueries({ queryKey: POSTS_QUERY_KEY });
+      const previousPosts = queryClient.getQueryData<Post[]>(POSTS_QUERY_KEY);
+
+      if (previousPosts) {
+        queryClient.setQueryData<Post[]>(
+          POSTS_QUERY_KEY,
+          previousPosts.map((p) =>
+            p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p
+          )
+        );
+      }
+      return { previousPosts };
+    },
+    onSuccess: (updatedPost) => {
+      toast.success('Post updated successfully!');
+      queryClient.setQueryData<Post[]>(POSTS_QUERY_KEY, (old = []) =>
+        old.map((p) => (p.id === updatedPost.id ? updatedPost : p))
+      );
+    },
+    onError: (_, __, context) => {
+      if (context?.previousPosts) {
+        queryClient.setQueryData(POSTS_QUERY_KEY, context.previousPosts);
+      }
+      toast.error('Failed to save post changes.');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
+    },
+  });
+}
+
+export function useBulkDeleteMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => postsApi.deletePost(id)));
+      return ids;
+    },
+    onMutate: async (ids: string[]) => {
+      await queryClient.cancelQueries({ queryKey: POSTS_QUERY_KEY });
+      const previousPosts = queryClient.getQueryData<Post[]>(POSTS_QUERY_KEY);
+      const deletedPosts = previousPosts?.filter((p) => ids.includes(p.id)) || [];
+
+      if (previousPosts) {
+        queryClient.setQueryData<Post[]>(
+          POSTS_QUERY_KEY,
+          previousPosts.filter((p) => !ids.includes(p.id))
+        );
+      }
+
+      // Undo toast window for batch deletion
+      if (deletedPosts.length > 0) {
+        toast(`Deleted ${deletedPosts.length} posts`, {
+          description: 'Posts removed from timeline.',
+          action: {
+            label: 'Undo',
+            onClick: () => {
+              queryClient.setQueryData<Post[]>(POSTS_QUERY_KEY, (old = []) => [
+                ...deletedPosts,
+                ...old,
+              ]);
+              deletedPosts.forEach((p) => {
+                postsApi.createPost({
+                  content: p.content,
+                  platforms: p.platforms,
+                  mediaUrl: p.mediaUrl,
+                  scheduledAt: p.scheduledAt,
+                });
+              });
+              toast.success(`Restored ${deletedPosts.length} posts`);
+            },
+          },
+          duration: 6000,
+        });
+      }
+
+      return { previousPosts };
+    },
+    onError: (_, __, context) => {
+      if (context?.previousPosts) {
+        queryClient.setQueryData(POSTS_QUERY_KEY, context.previousPosts);
+      }
+      toast.error('Failed to delete selected posts.');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
+    },
+  });
+}
+
+export function useBulkRescheduleMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ids, newTime }: { ids: string[]; newTime: string }) => {
+      const results = await Promise.all(
+        ids.map((id) =>
+          postsApi.updatePost(id, {
+            scheduledAt: newTime,
+            status: 'scheduled',
+            errorMessage: undefined,
+          })
+        )
+      );
+      return results;
+    },
+    onMutate: async ({ ids, newTime }) => {
+      await queryClient.cancelQueries({ queryKey: POSTS_QUERY_KEY });
+      const previousPosts = queryClient.getQueryData<Post[]>(POSTS_QUERY_KEY);
+
+      if (previousPosts) {
+        queryClient.setQueryData<Post[]>(
+          POSTS_QUERY_KEY,
+          previousPosts.map((p) =>
+            ids.includes(p.id)
+              ? { ...p, scheduledAt: newTime, status: 'scheduled', errorMessage: undefined }
+              : p
+          )
+        );
+      }
+      return { previousPosts };
+    },
+    onSuccess: (updatedPosts) => {
+      toast.success(`Rescheduled ${updatedPosts.length} posts successfully!`, {
+        description: `New slot: ${new Date(updatedPosts[0]?.scheduledAt || '').toLocaleString()}`,
+      });
+    },
+    onError: (_, __, context) => {
+      if (context?.previousPosts) {
+        queryClient.setQueryData(POSTS_QUERY_KEY, context.previousPosts);
+      }
+      toast.error('Failed to reschedule selected posts.');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });

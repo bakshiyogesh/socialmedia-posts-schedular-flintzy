@@ -16,10 +16,14 @@ interface PostQueueProps {
   hasFilters: boolean;
   onClearFilters: () => void;
   onOpenComposer: () => void;
+  selectedPostIds?: string[];
+  onToggleSelectPost?: (id: string) => void;
+  onEditPost?: (post: Post) => void;
   onDuplicatePost: (post: Post) => void;
   onReschedulePost?: (post: Post) => void;
   onReconnectAccount?: (post: Post) => void;
   onFixDimensions?: (post: Post) => void;
+  onDeletePost?: (post: Post) => void;
 }
 
 export function PostQueue({
@@ -30,10 +34,14 @@ export function PostQueue({
   hasFilters,
   onClearFilters,
   onOpenComposer,
+  selectedPostIds = [],
+  onToggleSelectPost,
+  onEditPost,
   onDuplicatePost,
   onReschedulePost,
   onReconnectAccount,
   onFixDimensions,
+  onDeletePost,
 }: PostQueueProps) {
   if (isLoading) {
     return <PostQueueSkeleton />;
@@ -81,10 +89,14 @@ export function PostQueue({
         <GroupedDateSection
           key={group.label}
           group={group}
+          selectedPostIds={selectedPostIds}
+          onToggleSelect={onToggleSelectPost}
+          onEdit={onEditPost}
           onDuplicate={onDuplicatePost}
           onReschedule={onReschedulePost}
           onReconnect={onReconnectAccount}
           onFixDimensions={onFixDimensions}
+          onDelete={onDeletePost}
         />
       ))}
     </div>

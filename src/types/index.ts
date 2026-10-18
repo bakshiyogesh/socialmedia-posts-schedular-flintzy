@@ -1,4 +1,4 @@
-export type PlatformId = 'x' | 'instagram' | 'tiktok' | 'facebook';
+export type PlatformId = 'x' | 'instagram' | 'tiktok' | 'facebook' | 'linkedin';
 
 export type PostStatus = 'scheduled' | 'published' | 'failed';
 
@@ -38,6 +38,7 @@ export interface FilterState {
   platforms: PlatformId[];
   status: PostStatus | 'all';
   q: string;
+  date?: string;
 }
 
 export interface StatusCounts {
