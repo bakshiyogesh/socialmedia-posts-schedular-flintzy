@@ -1,125 +1,172 @@
-# Flintzy — Social Media Post Scheduler
+# Flintzy — Multi-Channel Social Media Post Scheduler
 > **Positioning**: *"Never publish something broken."*
 
-A production-grade, multi-channel social media scheduler engineered for solo creators and agency social managers. The application eliminates the #1 frustration in social operations: silent API publishing rejections, truncated platform character limits, and broken media aspect ratios.
+A production-grade, multi-channel social media scheduler engineered for creators, marketers, and social teams. Flintzy eliminates the #1 frustration in social media operations: silent platform publishing rejections, truncated character limits, broken media dimensions, and timezone scheduling errors.
 
-Built with **Next.js 15 (App Router)**, **TypeScript (strict)**, **Tailwind CSS**, **TanStack Query**, **Sonner**, and **Node native unit tests**.
-
----
-
-## 🎯 1. Business Problem & Target Users
-
-- **Target Users**: Solo creators and agency social media managers managing multi-channel brands (X, Instagram, TikTok, Facebook).
-- **Core Pain Point**: Social media managers lose client trust and billable hours when posts fail silently at the platform API level, exceed character limits upon syndication, or go out formatted incorrectly.
-- **Flintzy Solution**: A proactive **Pre-Flight Validation Engine** that catches issues before scheduling, combined with a **1-Click Failure Recovery Pipeline** that makes resolving errors instantaneous.
+Built with **Next.js 15 (App Router)**, **React 19**, **TypeScript (Strict)**, **Tailwind CSS**, **TanStack Query v5**, **Framer Motion**, and **Vitest**.
 
 ---
 
-## 📈 2. Metrics This UI Moves
+## ⚡ Quick Start
 
-| Business Metric | Impact Mechanism | Expected Uplift |
-| :--- | :--- | :--- |
-| **Time to Schedule** | Unified multi-platform composer with live feed previews and simultaneous channel toggling. | **-65%** scheduling time per campaign |
-| **Failed-Post Recovery Rate** | Categorized error badges (`token_expired`, `media_rejected`, `rate_limited`) with 1-click optimistic retry and bulk recovery. | **+3.6x** recovery rate (from 25% to >90%) |
-| **Draft-to-Scheduled Conversion** | Continuous localStorage autosave with non-intrusive crash restore prompt. | **+40%** draft completion |
-| **Posts Scheduled per User/Week** | Upstream confidence: the "Ready to Publish" green shield assures users their content is algorithm-safe. | **+2.2x** volume expansion |
+### Prerequisites
+* **Node.js**: `v20.x` or `v22.x+` (Node 22 or 24 recommended)
+* **Package Manager**: **`pnpm`** `v9.x` or `v10.x` (recommended)
+  * If you don't have `pnpm` installed: `npm install -g pnpm`
 
----
-
-## ⚡ 3. Differentiators vs. Competitors
-
-- **vs. Buffer**: Buffer allows scheduling posts that fail silently at the network boundary hours later. Flintzy's pre-flight check validates platform constraints (e.g., media required for Instagram/TikTok, character ceilings) before the post is queued.
-- **vs. Hootsuite**: Hootsuite suffers from bloated enterprise navigation. Flintzy provides a fast, lightweight, keyboard-accessible workflow (`C` to compose, `/` to search) with zero clutter.
-- **vs. Later**: Later gates multi-channel caption customization behind enterprise tiers. Flintzy includes per-platform caption overrides directly inside the composer.
-- **vs. Publer**: Publer displays static error tables. Flintzy treats failures as actionable interactive state with optimistic execution, error rollback, and bulk recovery.
-
----
-
-## 🏗️ 4. Architecture Decisions
-
-### Feature-Driven Folder Structure
-```text
-src/
-├── app/
-│   ├── api/posts/route.ts             # REST Mock Route Handlers (GET, POST)
-│   ├── api/posts/[id]/retry/route.ts  # 1s delay, 20% simulated failure endpoint
-│   ├── api/posts/bulk-retry/route.ts  # Batch recovery endpoint
-│   ├── page.tsx                       # Dashboard: URL sync, filters, queue
-│   └── globals.css                    # Tailored Flintzy dark design tokens
-├── config/
-│   └── platforms.ts                   # Declarative platform rules as data
-├── features/
-│   ├── posts/                         # PostCard, PostQueue, StatusBadge, BulkRetryBanner
-│   │   ├── hooks/usePosts.ts          # TanStack Query optimistic mutations
-│   │   └── api/postsApi.ts            # Typed REST client boundary
-│   ├── composer/                      # Multi-channel composer, pre-flight panel, preview
-│   │   └── utils/validation.ts        # Pure pre-flight validation engine
-│   └── filters/                       # Search, multi-platform chips, filter logic
-│       └── utils/filterPosts.ts       # Pure, unit-tested filtering function
-├── lib/
-│   ├── time/index.ts                  # Timezone, UTC converter, DST-resilient day grouping
-│   └── api/postsStore.ts              # In-memory stateful store with 32 seed posts
-└── types/
-    └── index.ts                       # Strict domain models (Post, PlatformId, Status)
+### 1. Clone the repository
+```bash
+git clone https://github.com/bakshiyogesh/socialmedia-posts-schedular-flintzy.git
+cd socialmedia-posts-schedular-flintzy
 ```
 
-### Key Technical Pillars
-1. **Platform Config as Pure Data (`config/platforms.ts`)**:
-   Adding a new platform (e.g., LinkedIn, Threads, YouTube Shorts) requires adding only ~10 lines of declarative configuration. The composer, counters, previews, and validators adapt automatically.
-2. **State Ownership Hierarchy**:
-   - **Server State (TanStack Query)**: Owns post entities, optimistic retries, undo-delete windows, and cache consistency.
-   - **URL Query Parameters (`useSearchParams`)**: Owns filter state (`platforms`, `status`, debounced `q`). Survives page refreshes and enables shareable links.
-   - **Local State**: Owns composer form fields, active preview tab, and pre-flight accordion toggle.
-   - **Persistent Client Storage (`localStorage`)**: Owns draft autosave (`flintzy_composer_draft`).
-3. **UTC & Local Timezone Strategy**:
-   - **Storage Invariant**: Every post timestamp is stored as an exact ISO 8601 UTC string (`.toISOString()`).
-   - **Validation Invariant**: `scheduledAt` must be strictly in the future (`> Date.now()`).
-   - **Display Invariant**: Formatted in user's local timezone with timezone abbreviation (e.g., `Oct 16, 2:30 PM EDT`).
-   - **Day Grouping Algorithm**: Computed against **local calendar day boundaries** (`getCalendarDayDifference`), ensuring a 23:30 local post crossing UTC midnight correctly remains under `"Today"`.
-4. **Optimistic Mutations with Rollback**:
-   - Single-post retry immediately updates the UI to `status: 'scheduled'`.
-   - Simulates a 1-second delay and a 20% failure rate.
-   - On HTTP 500 failure, TanStack Query reverts cache to snapshot and displays an actionable Sonner toast.
-   - Delete mutation provides a 5-second **Undo window**.
+### 2. Install dependencies
+```bash
+pnpm install
+```
+
+### 3. Run the development server
+```bash
+pnpm dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## ⚖️ 5. Trade-offs
+## 📋 Available Scripts
 
-- **Client-Side Filtering for Mock Dataset**: Pure in-memory filtering was chosen for instant sub-millisecond responsiveness on the 32-item mock dataset. At production scale (>10,000 posts), filtering would shift server-side using SQL/Elasticsearch with cursor-based pagination.
-- **Native Date / Intl vs. Heavy Timezone Libraries**: Used native `Intl.DateTimeFormat` and standard `Date` math instead of heavy Moment.js/Luxon dependencies, maintaining a lean **141 kB First Load JS** bundle.
-- **Integrated Next.js Mock API Route Handlers**: Implemented stateful Next.js Route Handlers alongside typed API client abstraction. This ensures 100% deterministic local execution across any browser environment without service worker registration flakiness.
-
----
-
-## 🚀 6. Next Steps (Skipped Scope & Business Rationale)
-
-1. **Drag-and-Drop Calendar Rescheduling**: *Deferred*. Keyboard and date-picker inputs cover 95% of scheduling jobs with superior mobile accessibility and lower maintenance overhead.
-2. **AI Caption Generator**: *Deferred*. Publishing reliability and algorithmic format safety must be perfected before introducing speculative generative AI text.
-3. **Multi-User Approval Workflows**: *Deferred*. Valuable for enterprise agencies (20+ seats), but unnecessary complexity for solo creators and nimble growth teams.
+| Command | Description |
+| :--- | :--- |
+| `pnpm dev` | Starts local Next.js development server with Turbopack / HMR at `localhost:3000` |
+| `pnpm build` | Creates an optimized production build |
+| `pnpm start` | Runs the compiled Next.js production server |
+| `pnpm test` | Runs the complete Vitest unit test suite (38 passing tests) |
+| `pnpm test:watch` | Runs Vitest in interactive watch mode for TDD |
+| `pnpm typecheck` | Runs TypeScript compiler (`tsc --noEmit`) to verify strict type safety |
+| `pnpm lint` | Runs Next.js ESLint rules |
 
 ---
 
-## 🛠️ 7. Getting Started
+## ✨ Key Features
+
+### 1. 🛡️ Pre-Flight Validation Engine
+Catch publishing errors **before** the post is queued:
+* **Real-time Character Limits**: Instant validation across platforms (e.g., X 280-char ceiling vs. LinkedIn 3,000 chars).
+* **Media Enforcement**: Requires media for visual-first platforms (Instagram, TikTok) while allowing text-only posts on X, Facebook, and LinkedIn.
+* **Timestamp Invariant**: Prevents scheduling in the past; enforces future UTC timestamps.
+* **Format & Aspect Ratio Checks**: Validates images and videos with progressive feedback.
+
+### 2. 📱 Multi-Platform Live Feed Previews
+* Live, pixel-accurate previews simulating **X (Twitter)**, **Instagram** (with verified badges and bottom captioning), **TikTok**, **Facebook**, and **LinkedIn**.
+* Per-platform caption customization overrides.
+
+### 3. 📅 Interactive Calendar & Date-Based Scheduling
+* **Calendar View**: Monthly grid showing daily scheduled post counters.
+* **Click-to-Schedule**: Clicking an empty calendar day pre-fills that date in the composer; clicking a day with existing posts lets you inspect or edit.
+* **Smart Day Grouping**: Posts are automatically categorized under **Today**, **Tomorrow**, upcoming dates, or **Earlier** (historical/failed) computed against local midnight boundaries.
+
+### 4. 🔄 1-Click Failure Recovery & Bulk Operations
+* Categorized error badges for failed posts (`token_expired`, `media_rejected`, `rate_limited`).
+* **Optimistic Single Retry**: Instant visual feedback with a simulated 20% failure probability to test rollback and toast recovery.
+* **Bulk Retry Banner**: Recover all failed posts across the queue in one click.
+* **Bulk Reschedule & Bulk Delete**: Reschedule or delete multiple posts with confirmation modals and a 5-second **Undo** toast window.
+
+### 5. 💾 Crash-Proof Draft Persistence
+* **Text & Settings**: Saved in `localStorage` in real time.
+* **Media Assets**: Large images, videos, and Base64 uploads are saved to **IndexedDB** (`draftMediaDb`) to bypass the 5MB localStorage quota.
+* **Unload Guard**: Warns users if they attempt to navigate away with unsaved composer changes.
+
+---
+
+## 🗂️ Project Directory Structure
+
+```text
+socialmedia-posts-schedular-flintzy/
+├── ARCHITECTURE.md                  # Comprehensive architectural decision records (ADRs)
+├── public/                          # Static assets and favicons
+├── src/
+│   ├── app/                         # Next.js App Router
+│   │   ├── api/posts/               # REST API Route Handlers (GET, POST, retry, bulk)
+│   │   ├── layout.tsx               # Root application layout with TanStack Query provider
+│   │   ├── page.tsx                 # Main dashboard view (URL state, filters, queue, composer)
+│   │   └── globals.css              # Tailwind CSS base tokens & custom scrollbars
+│   ├── config/
+│   │   └── platforms.ts             # Declarative platform rules (limits, requirements, badges)
+│   ├── features/                    # Feature-sliced modular architecture
+│   │   ├── calendar/                # Calendar view, month grid, click-to-schedule routing
+│   │   ├── composer/                # Multi-platform composer, live preview, pre-flight panel
+│   │   ├── drafts/                  # Draft recovery prompts & unload guards
+│   │   ├── filters/                 # URL-synced search, platform chips, date filter popover
+│   │   └── posts/                   # PostCard, PostQueue, StatusBadge, RescheduleModal, DeleteModal
+│   ├── lib/
+│   │   ├── api/                     # In-memory post store seeded with 32 realistic posts
+│   │   ├── media/                   # Progressive image loader, video detector, URL normalizer
+│   │   ├── storage/                 # IndexedDB draft media binary cache (draftMediaDb)
+│   │   └── time/                    # UTC converters, local midnight grouping, relative timestamps
+│   └── types/
+│       └── index.ts                 # Strict TypeScript domain models (Post, PlatformId, Status)
+├── tests/
+│   └── unit.test.ts                 # 38 Vitest tests covering timezones, filters, validation, & UI
+├── package.json
+└── pnpm-lock.yaml
+```
+
+For in-depth details on system design, data flow diagrams, and architectural decision records, see **[`ARCHITECTURE.md`](file:///home/thirdweb/work/socialmedia-posts-schedular-flintzy/ARCHITECTURE.md)**.
+
+---
+
+## 📊 Platform Limits Matrix
+
+| Platform | Character Ceiling | Media Required? | Supported Media Formats |
+| :--- | :---: | :---: | :--- |
+| **X (Twitter)** | 280 chars | No | Images (JPEG/PNG), MP4 Videos |
+| **Instagram** | 2,200 chars | **Yes** | Single Image, Carousel, Reels Video |
+| **TikTok** | 2,200 chars | **Yes** | Vertical Video (9:16) |
+| **Facebook** | 5,000 chars | No | Images, Video, Text |
+| **LinkedIn** | 3,000 chars | No | Articles, Images, Documents, Video |
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+Flintzy includes a comprehensive test suite written in **Vitest**:
 
 ```bash
-# 1. Install dependencies
-npm install
-
-# 2. Run unit test suite (Timezones, Day Grouping, Filters, Validation)
-npm test
-
-# 3. Typecheck project
-npm run typecheck
-
-# 4. Start local development server
-npm run dev
+# Run all unit tests
+pnpm test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the application.
+### Covered Test Suites (38 tests):
+1. **Timezone & Local Midnight Grouping**: Validates that posts scheduled across UTC midnight remain strictly grouped by local user calendar days.
+2. **Filtering & Search Engine**: Case-insensitive search, multi-platform intersection, and status counting.
+3. **Pre-Flight Validation Engine**: Enforces character caps, media checks, URL parsing, and future-date constraints.
+4. **Media Utilities**: Protocol normalization (`blob:`, `data:`, external HTTP) and video container detection.
+5. **Relative Timestamping**: Short social media relative notations (`1hr ago`, `1d`, `1w`).
+6. **IndexedDB Draft Recovery**: Verifies SSR safety and non-browser fallback handling.
+7. **Popover Auto-Flip Collision**: Viewport boundary detection and vertical flip calculation.
+8. **Selection & Deletion State**: Bulk ID management, single-post deletion filtering, and cleanup.
+9. **Date Filtering Engine**: `today`, `tomorrow`, `earlier`, and exact `YYYY-MM-DD` matching.
 
-Keyboard shortcuts:
-- `C` — Open post composer
-- `/` — Focus search input
-- `Cmd/Ctrl + Enter` — Schedule post when pre-flight checks are satisfied
-- `Escape` — Close modal
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Action |
+| :--- | :--- |
+| <kbd>C</kbd> | Open Post Composer |
+| <kbd>/</kbd> | Focus Search Bar |
+| <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>Enter</kbd> | Submit & Schedule Post (when pre-flight checks pass) |
+| <kbd>Esc</kbd> | Close Modal or Drawer |
+
+---
+
+## 🚀 Deployment (Vercel)
+
+Flintzy is optimized for seamless deployment on **Vercel**:
+
+1. Push your repository to GitHub.
+2. Import the project into your Vercel Dashboard.
+3. Vercel automatically detects `pnpm-lock.yaml` and executes:
+   - **Install Command**: `pnpm install`
+   - **Build Command**: `pnpm run build`
+4. Deploy! Zero additional configuration required.
