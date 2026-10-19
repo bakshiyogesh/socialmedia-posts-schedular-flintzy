@@ -82,7 +82,7 @@ State in Flintzy is deliberately stratified to ensure single sources of truth wi
 ### ADR 01: Declarative Platform Configuration as Pure Data
 * **Status**: Accepted
 * **Context**: Multi-channel social tools frequently degrade into nested `if (platform === 'twitter')` or `if (platform === 'instagram')` checks scattered across forms, previews, and list items.
-* **Decision**: Define a single strongly-typed `PlatformConfig` interface in [`src/config/platforms.ts`](file:///home/thirdweb/work/socialmedia-posts-schedular-flintzy/src/config/platforms.ts):
+* **Decision**: Define a single strongly-typed `PlatformConfig` interface in [`src/config/platforms.ts`]:
   ```typescript
   export interface PlatformConfig {
     id: PlatformId;
