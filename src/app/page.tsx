@@ -226,22 +226,19 @@ function DashboardContent() {
     if (!deleteTarget) return;
 
     if (deleteTarget.type === 'bulk') {
-      bulkDeleteMutation.mutate(deleteTarget.ids, {
+      const idsToDelete = deleteTarget.ids;
+      setDeleteTarget(null);
+      bulkDeleteMutation.mutate(idsToDelete, {
         onSuccess: () => {
           setSelectedPostIds([]);
-        },
-        onSettled: () => {
-          setDeleteTarget(null);
         },
       });
     } else {
       const singleId = deleteTarget.ids[0];
+      setDeleteTarget(null);
       singleDeleteMutation.mutate(singleId, {
         onSuccess: () => {
           setSelectedPostIds((prev) => prev.filter((id) => id !== singleId));
-        },
-        onSettled: () => {
-          setDeleteTarget(null);
         },
       });
     }
