@@ -63,7 +63,7 @@ export function SearchInput({ initialValue = "", onSearchChange = () => { } }: S
         onChange={(e) => setValue(e.target.value)}
         placeholder="Search copy, errors, platforms... (Press /)"
         aria-label="Search posts by content, error message or platform"
-        className="w-full pl-9 pr-9 py-2 bg-zinc-900/80 border border-zinc-800 rounded-lg text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+        className="w-full pl-9 pr-9 py-2 bg-zinc-900/80 border border-zinc-800 rounded-lg text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
       />
 
       {value && (
