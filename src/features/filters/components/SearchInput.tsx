@@ -51,7 +51,7 @@ export function SearchInput({ initialValue = "", onSearchChange = () => { } }: S
   };
 
   return (
-    <div className="relative flex-1 min-w-[220px]">
+    <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
         <Search className="w-4 h-4" aria-hidden="true" />
       </div>

@@ -1,6 +1,7 @@
 {
   "name": "socialmedia-posts-schedular-flintzy",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.18.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -26,7 +27,7 @@
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.2",

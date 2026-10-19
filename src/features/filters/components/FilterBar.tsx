@@ -29,38 +29,46 @@ export function FilterBar({
   };
 
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 bg-zinc-900/40 border border-zinc-800/80 rounded-xl">
-      {/* Search Input */}
-      <SearchInput
-        initialValue={filters.q}
-        onSearchChange={(q) => onUpdateFilters({ q })}
-      />
+    <div className="p-3 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl space-y-2.5">
+      {/* Primary Row: Search Input + Date Filter + Reset Button */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <SearchInput
+            initialValue={filters.q}
+            onSearchChange={(q) => onUpdateFilters({ q })}
+          />
+        </div>
 
-      {/* Date & Platform Filters + Reset */}
-      <div className="flex items-center justify-between md:justify-end gap-2 flex-wrap">
-        <DateFilter
-          selectedDate={filters.date}
-          onSelectDate={(date) => onUpdateFilters({ date })}
-          onClear={() => onUpdateFilters({ date: 'all' })}
-        />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex-1 sm:w-48 sm:flex-initial min-w-0">
+            <DateFilter
+              selectedDate={filters.date}
+              onSelectDate={(date) => onUpdateFilters({ date })}
+              onClear={() => onUpdateFilters({ date: 'all' })}
+            />
+          </div>
 
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={onResetFilters}
+              className="inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-800/80 hover:border-zinc-700 transition-colors shrink-0 h-10"
+              title="Reset all active filters"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Secondary Row: Platform Filter channel strip */}
+      <div className="pt-2 border-t border-zinc-800/50 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
         <PlatformFilter
           selectedPlatforms={filters.platforms}
           onTogglePlatform={handleTogglePlatform}
           onClear={() => onUpdateFilters({ platforms: [] })}
         />
-
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={onResetFilters}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-transparent hover:border-zinc-700 transition-colors"
-            title="Reset all active filters"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset</span>
-          </button>
-        )}
       </div>
     </div>
   );
