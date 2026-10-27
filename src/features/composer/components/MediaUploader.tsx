@@ -1,10 +1,24 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { UploadCloud, Link as LinkIcon, Image as ImageIcon, X, Check, FileText, Video as VideoIcon } from 'lucide-react';
+import { UploadCloud, Link as LinkIcon, Image as ImageIcon, X, Check, FileText, Video as VideoIcon, Eye, EyeOff } from 'lucide-react';
 import { ProgressiveImage } from '@/components/shared/ProgressiveImage';
 import { toast } from 'sonner';
 import { saveDraftMedia, clearDraftMedia } from '@/lib/storage/draftMediaDb';
+import { isPdfMedia } from '@/lib/media';
+import dynamic from 'next/dynamic';
+import React, { useRef, useState } from 'react';
+
+const PDFRender = dynamic(
+  () => import('@/features/posts/components/PdfRender').then((mod) => mod.PDFRender),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-40 flex items-center justify-center text-xs text-zinc-500 rounded-xl border border-zinc-800 bg-zinc-950">
+        Loading PDF Viewer...
+      </div>
+    ),
+  }
+);
 
 interface MediaUploaderProps {
   mediaUrl: string;
@@ -13,8 +27,8 @@ interface MediaUploaderProps {
   onStateChange: (state: 'idle' | 'loading' | 'loaded' | 'error') => void;
   fileName?: string | null;
   fileSize?: string | null;
-  fileType?: 'image' | 'video' | null;
-  onFileInfoChange?: (info: { fileName: string | null; fileSize: string | null; fileType: 'image' | 'video' | null }) => void;
+  fileType?: 'image' | 'video' | 'application/pdf' | null;
+  onFileInfoChange?: (info: { fileName: string | null; fileSize: string | null; fileType: 'image' | 'video' | 'application/pdf' | null }) => void;
 }
 
 const SAMPLE_PRESETS = [
@@ -37,6 +51,7 @@ export function MediaUploader({
     mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:') ? 'upload' : 'url'
   );
 
+
   // Synchronize active mode when editing an existing post or loading draft
   React.useEffect(() => {
     if (mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:')) {
@@ -49,13 +64,15 @@ export function MediaUploader({
   const [localFileInfo, setLocalFileInfo] = useState<{
     fileName: string;
     fileSize: string;
-    fileType: 'image' | 'video';
+    fileType: 'image' | 'video' | 'application/pdf';
   } | null>(null);
+  const [showPdfPreview, setShowPdfPreview] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadedFileName = fileName !== undefined ? fileName : localFileInfo?.fileName ?? null;
   const uploadedFileSize = fileSize !== undefined ? fileSize : localFileInfo?.fileSize ?? null;
   const uploadedFileType = fileType !== undefined ? fileType : localFileInfo?.fileType ?? null;
+  const isPdf = uploadedFileType === 'application/pdf' || isPdfMedia(mediaUrl);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -66,8 +83,11 @@ export function MediaUploader({
   const handleProcessFile = (file: File) => {
     const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|ogg|mov|m4v)$/i.test(file.name);
     const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg|bmp)$/i.test(file.name);
+    const isPdf = file.type.startsWith("application/pdf") || /\.(pdf)$/i.test(file.name);
+    console.log({ file });
 
-    if (!isVideo && !isImage) {
+
+    if (!isVideo && !isImage && !isPdf) {
       toast.error('Please upload an image or video file.');
       return;
     }
@@ -82,7 +102,7 @@ export function MediaUploader({
     const info = {
       fileName: file.name,
       fileSize: formattedSize,
-      fileType: isVideo ? ('video' as const) : ('image' as const),
+      fileType: isVideo ? ('video' as const) : isPdf ? ("application/pdf" as const) : ('image' as const),
     };
     setLocalFileInfo(info);
     onFileInfoChange?.(info);
@@ -92,17 +112,20 @@ export function MediaUploader({
       // Create local object URL (Blob URL) for instant zero-copy preview.
       // Append #video fragment for videos so format detection reliably classifies it.
       const rawUrl = URL.createObjectURL(file);
-      const objectUrl = isVideo ? `${rawUrl}#video` : rawUrl;
+      const objectUrl = isVideo ? `${rawUrl}#video` : isPdf ? `${rawUrl}#pdf` : rawUrl;
 
       // Persist raw binary File in IndexedDB so it survives hard browser refreshes
       saveDraftMedia(file, {
         fileName: file.name,
         fileSize: formattedSize,
-        fileType: isVideo ? 'video' : 'image',
+        fileType: isVideo ? 'video' : isPdf ? 'application/pdf' : 'image',
       }).catch(() => {
         // IndexedDB unavailable or private mode, silently continue
       });
 
+      if (isPdf) {
+        setShowPdfPreview(true);
+      }
       onMediaChange(objectUrl);
       onStateChange('loaded');
       toast.success(`Attached ${file.name}`);
@@ -144,15 +167,16 @@ export function MediaUploader({
   const handleClear = () => {
     onMediaChange('');
     setLocalFileInfo(null);
+    setShowPdfPreview(false);
     onFileInfoChange?.({ fileName: null, fileSize: null, fileType: null });
-    clearDraftMedia().catch(() => {});
+    clearDraftMedia().catch(() => { });
     onStateChange('idle');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const isDataUrl = mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:');
+  const isDataUrl = mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:') || mediaUrl.startsWith("pdf");
 
   return (
     <div className="space-y-2.5">
@@ -168,11 +192,10 @@ export function MediaUploader({
           <button
             type="button"
             onClick={() => setActiveMode('upload')}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
-              activeMode === 'upload'
-                ? 'bg-zinc-800 text-white shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${activeMode === 'upload'
+              ? 'bg-zinc-800 text-white shadow-sm'
+              : 'text-zinc-400 hover:text-zinc-200'
+              }`}
           >
             <UploadCloud className="w-3 h-3" />
             <span>Upload File</span>
@@ -180,11 +203,10 @@ export function MediaUploader({
           <button
             type="button"
             onClick={() => setActiveMode('url')}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
-              activeMode === 'url'
-                ? 'bg-zinc-800 text-white shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${activeMode === 'url'
+              ? 'bg-zinc-800 text-white shadow-sm'
+              : 'text-zinc-400 hover:text-zinc-200'
+              }`}
           >
             <LinkIcon className="w-3 h-3" />
             <span>Paste URL</span>
@@ -197,7 +219,7 @@ export function MediaUploader({
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept="image/*,video/*"
+        accept="image/*,video/*, application/pdf"
         className="hidden"
         aria-label="Upload local media file"
       />
@@ -209,11 +231,10 @@ export function MediaUploader({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
-            isDragging
-              ? 'border-indigo-500 bg-indigo-500/10 scale-[1.01]'
-              : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/70'
-          }`}
+          className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${isDragging
+            ? 'border-indigo-500 bg-indigo-500/10 scale-[1.01]'
+            : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/70'
+            }`}
         >
           <div className="flex flex-col items-center justify-center gap-2">
             <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shadow-sm">
@@ -245,7 +266,7 @@ export function MediaUploader({
                 onMediaChange(e.target.value);
                 setLocalFileInfo(null);
                 onFileInfoChange?.({ fileName: null, fileSize: null, fileType: null });
-                clearDraftMedia().catch(() => {});
+                clearDraftMedia().catch(() => { });
               }}
               placeholder="https://images.unsplash.com/... or paste image link"
               className="w-full pl-9 pr-8 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
@@ -274,7 +295,7 @@ export function MediaUploader({
                     onMediaChange(preset.url);
                     setLocalFileInfo(null);
                     onFileInfoChange?.({ fileName: null, fileSize: null, fileType: null });
-                    clearDraftMedia().catch(() => {});
+                    clearDraftMedia().catch(() => { });
                   }}
                   className="px-2 py-0.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors"
                 >
@@ -307,9 +328,11 @@ export function MediaUploader({
                     <Check className="w-3.5 h-3.5" />
                     {uploadedFileType === 'video'
                       ? 'Video Attached'
-                      : isDataUrl
-                      ? 'Local File Attached'
-                      : 'Media Attached'}
+                      : isPdf
+                        ? 'PDF Document Attached'
+                        : isDataUrl
+                          ? 'Local File Attached'
+                          : 'Media Attached'}
                   </span>
                 ) : mediaLoadState === 'error' ? (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-400">
@@ -328,6 +351,8 @@ export function MediaUploader({
                 <p className="text-[11px] text-zinc-300 truncate flex items-center gap-1 mt-0.5">
                   {uploadedFileType === 'video' ? (
                     <VideoIcon className="w-3 h-3 text-indigo-400 shrink-0" />
+                  ) : isPdf ? (
+                    <FileText className="w-3 h-3 text-rose-400 shrink-0" />
                   ) : (
                     <FileText className="w-3 h-3 text-zinc-500 shrink-0" />
                   )}
@@ -345,6 +370,20 @@ export function MediaUploader({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            {isPdf && (
+              <button
+                type="button"
+                onClick={() => setShowPdfPreview((prev) => !prev)}
+                className={`px-2 py-1 rounded-md text-[11px] font-medium border transition-colors flex items-center gap-1.5 ${showPdfPreview
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                    : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
+                  }`}
+                title={showPdfPreview ? 'Hide PDF preview' : 'View PDF preview'}
+              >
+                {showPdfPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{showPdfPreview ? 'Hide PDF' : 'Preview PDF'}</span>
+              </button>
+            )}
             {isDataUrl && (
               <button
                 type="button"
@@ -363,6 +402,20 @@ export function MediaUploader({
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Embedded PDF Viewer (Shown below card when PDF is attached) */}
+      {mediaUrl && isPdf && showPdfPreview && (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 shadow-lg space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-rose-400" />
+              <span>PDF Document Viewer</span>
+            </span>
+            <span className="text-[10px] text-zinc-500">Scrollable pages</span>
+          </div>
+          <PDFRender pdfUrl={mediaUrl} className="h-[360px]" />
         </div>
       )}
     </div>

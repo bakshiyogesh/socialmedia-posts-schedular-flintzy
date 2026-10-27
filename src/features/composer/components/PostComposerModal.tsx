@@ -43,7 +43,7 @@ export function PostComposerModal({
   const [mediaFileInfo, setMediaFileInfo] = useState<{
     fileName: string | null;
     fileSize: string | null;
-    fileType: 'image' | 'video' | null;
+    fileType: 'image' | 'video' | 'application/pdf' | null;
   }>({ fileName: null, fileSize: null, fileType: null });
   // Default +2 hours in future
   const [scheduledAt, setScheduledAt] = useState<string>(defaultScheduledAt);
@@ -55,13 +55,17 @@ export function PostComposerModal({
    * The modal stays mounted while closed, so state must be reset explicitly.
    * Prefills from `source` when duplicating, otherwise returns to a blank form.
    */
+
+
+  console.log({ mediaFileInfo });
+
   const resetForm = useCallback((source?: Post | null, prefillDate?: string | null) => {
     setContent(source?.content ?? '');
     setPlatforms(source?.platforms ?? DEFAULT_PLATFORMS);
     setMediaUrl(source?.mediaUrl ?? '');
     setMediaLoadState('idle');
     setMediaFileInfo({ fileName: null, fileSize: null, fileType: null });
-    
+
     if (source?.scheduledAt) {
       setScheduledAt(source.scheduledAt);
     } else if (prefillDate) {
@@ -193,9 +197,16 @@ export function PostComposerModal({
 
       // Check if an offline binary media attachment is saved in IndexedDB
       const mediaRecord = await getDraftMedia().catch(() => null);
+      console.log({ mediaRecord });
+
       if (mediaRecord) {
         const rawUrl = URL.createObjectURL(mediaRecord.blob);
-        const objectUrl = mediaRecord.fileType === 'video' ? `${rawUrl}#video` : rawUrl;
+        const objectUrl =
+          mediaRecord.fileType === 'video'
+            ? `${rawUrl}#video`
+            : mediaRecord.fileType === 'application/pdf'
+              ? `${rawUrl}#pdf`
+              : rawUrl;
         setMediaUrl(objectUrl);
         setMediaFileInfo({
           fileName: mediaRecord.fileName,
@@ -214,7 +225,7 @@ export function PostComposerModal({
 
   const discardDraft = () => {
     localStorage.removeItem(DRAFT_STORAGE_KEY);
-    clearDraftMedia().catch(() => {});
+    clearDraftMedia().catch(() => { });
     setMediaFileInfo({ fileName: null, fileSize: null, fileType: null });
     setHasDraftPrompt(false);
   };
@@ -245,7 +256,7 @@ export function PostComposerModal({
   const createMutation = useCreatePostMutation(() => {
     // Post is persisted: drop the draft and clear the form so the next open is blank.
     localStorage.removeItem(DRAFT_STORAGE_KEY);
-    clearDraftMedia().catch(() => {});
+    clearDraftMedia().catch(() => { });
     resetForm();
     onClose();
   });
@@ -487,8 +498,8 @@ export function PostComposerModal({
                     ? 'Saving Changes...'
                     : 'Scheduling...'
                   : isEditing
-                  ? 'Save Changes'
-                  : 'Schedule Post'}
+                    ? 'Save Changes'
+                    : 'Schedule Post'}
               </span>
             </button>
           </div>

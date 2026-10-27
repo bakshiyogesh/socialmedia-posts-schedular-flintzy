@@ -21,13 +21,22 @@ export function isVideoMedia(src: string): boolean {
   return /\.(mp4|webm|ogg|mov|m4v)($|\?|#)/i.test(s);
 }
 
+/** Checks whether a given media URL represents a PDF document. */
+export function isPdfMedia(src: string): boolean {
+  if (!src) return false;
+  const s = src.toLowerCase();
+  if (s.startsWith('data:application/pdf')) return true;
+  if (s.includes('#pdf') || s.includes('type=pdf')) return true;
+  return /\.pdf($|\?|#)/i.test(s);
+}
+
 /**
  * Derives a tiny, low-quality placeholder (LQIP) URL for CDNs that support
- * on-the-fly resizing. Returns null when the host is unknown or media is local/video.
+ * on-the-fly resizing. Returns null when the host is unknown or media is local/video/pdf.
  */
 export function getLowQualityUrl(src: string): string | null {
   try {
-    if (src.startsWith('data:') || src.startsWith('blob:') || isVideoMedia(src)) return null;
+    if (src.startsWith('data:') || src.startsWith('blob:') || isVideoMedia(src) || isPdfMedia(src)) return null;
     const url = new URL(src);
     if (url.hostname.endsWith('images.unsplash.com')) {
       url.searchParams.set('w', '24');

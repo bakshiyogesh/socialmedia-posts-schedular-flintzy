@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ImageOff } from 'lucide-react';
-import { normalizeMediaUrl, isVideoMedia, getLowQualityUrl } from '@/lib/media';
+import { ImageOff, FileText } from 'lucide-react';
+import { normalizeMediaUrl, isVideoMedia, isPdfMedia, getLowQualityUrl } from '@/lib/media';
 
-export { normalizeMediaUrl, isVideoMedia, getLowQualityUrl };
+export { normalizeMediaUrl, isVideoMedia, isPdfMedia, getLowQualityUrl };
 export type ImageLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
 interface ProgressiveImageProps {
@@ -57,12 +57,16 @@ export function ProgressiveImage({
       setState('idle');
       return;
     }
+    if (isPdfMedia(debouncedSrc)) {
+      setState('loaded');
+      return;
+    }
     setState('loading');
   }, [debouncedSrc]);
 
   // Safeguard: if an external image hangs or takes longer than 6 seconds, gracefully flag error
   useEffect(() => {
-    if (state !== 'loading' || !debouncedSrc) return;
+    if (state !== 'loading' || !debouncedSrc || isPdfMedia(debouncedSrc)) return;
     const timer = setTimeout(() => {
       setState('error');
     }, 6000);
@@ -73,19 +77,20 @@ export function ProgressiveImage({
     onStateChange?.(state);
   }, [state, onStateChange]);
 
-  const isVideoItem = isVideo || isVideoMedia(debouncedSrc);
-  const lqip = (!isVideoItem && debouncedSrc) ? getLowQualityUrl(debouncedSrc) : null;
+  const isPdfItem = isPdfMedia(debouncedSrc);
+  const isVideoItem = !isPdfItem && (isVideo || isVideoMedia(debouncedSrc));
+  const lqip = (!isVideoItem && !isPdfItem && debouncedSrc) ? getLowQualityUrl(debouncedSrc) : null;
   const isLoaded = state === 'loaded';
 
   return (
     <div className={`relative w-full h-full overflow-hidden bg-zinc-900 ${className}`}>
       {/* 1. Shimmer skeleton */}
-      {state === 'loading' && !lqipLoaded && (
+      {state === 'loading' && !lqipLoaded && !isPdfItem && (
         <div className="absolute inset-0 animate-shimmer bg-[linear-gradient(110deg,#18181b_8%,#27272a_18%,#18181b_33%)] bg-[length:200%_100%]" />
       )}
 
       {/* 2. Low-quality blurred placeholder (for static images) */}
-      {lqip && state !== 'error' && !isVideoItem && (
+      {lqip && state !== 'error' && !isVideoItem && !isPdfItem && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={`lqip-${lqip}`}
@@ -120,8 +125,20 @@ export function ProgressiveImage({
         />
       )}
 
-      {/* 3b. Full-resolution image */}
-      {debouncedSrc && state !== 'error' && !isVideoItem && (
+      {/* 3b. PDF document thumbnail/card */}
+      {debouncedSrc && state !== 'error' && isPdfItem && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950 p-2 text-rose-400 select-none">
+          <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-1">
+            <FileText className="w-4 h-4 text-rose-400" />
+          </div>
+          {!compact && (
+            <span className="text-[11px] font-semibold text-zinc-300 tracking-tight">PDF Document</span>
+          )}
+        </div>
+      )}
+
+      {/* 3c. Full-resolution image */}
+      {debouncedSrc && state !== 'error' && !isVideoItem && !isPdfItem && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           ref={(el) => {

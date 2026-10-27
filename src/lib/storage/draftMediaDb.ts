@@ -8,7 +8,7 @@ export interface DraftMediaRecord {
   blob: Blob;
   fileName: string;
   fileSize: string;
-  fileType: 'image' | 'video';
+  fileType: 'image' | 'video' | 'application/pdf';
   updatedAt: number;
 }
 
@@ -46,7 +46,7 @@ function openDb(): Promise<IDBDatabase | null> {
  */
 export async function saveDraftMedia(
   blob: Blob,
-  meta: { fileName: string; fileSize: string; fileType: 'image' | 'video' }
+  meta: { fileName: string; fileSize: string; fileType: 'image' | 'video' | 'application/pdf' }
 ): Promise<void> {
   const db = await openDb();
   if (!db) return;

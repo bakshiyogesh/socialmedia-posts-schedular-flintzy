@@ -62,7 +62,7 @@ export const postsStore = {
       return { post: null, success: false, error: 'Post not found' };
     }
 
-    // 20% chance of failure as required by assignment specification
+    // 20% chance of failure as required
     const isFailure = Math.random() < 0.2;
     if (isFailure) {
       return {
